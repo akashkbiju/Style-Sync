@@ -27,7 +27,7 @@ const MainContent = () => {
   const { activeRole, customerTab, adminTab } = useSalon();
 
   return (
-    <main style={{ maxWidth: '1350px', margin: '0 auto', padding: '1.5rem 1.5rem', minHeight: '80vh' }}>
+    <main style={{ maxWidth: '1350px', margin: '0 auto', padding: '5.5rem 1.5rem 2rem', minHeight: '80vh' }}>
       
       {/* Customer Module Views */}
       {activeRole === 'customer' && (
