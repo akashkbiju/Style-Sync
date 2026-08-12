@@ -74,9 +74,9 @@ export const LandingPage = () => {
           <div className="relative group">
             <div className="relative z-10 overflow-hidden border border-white/10 rounded">
               <img 
-                alt="High fashion model with modern haircut" 
-                className="w-full h-[480px] object-cover grayscale brightness-75 group-hover:grayscale-0 transition duration-700" 
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+                alt="High fashion model with modern suit styling" 
+                className="w-full h-auto max-h-[560px] object-cover object-top aspect-[3/4] grayscale brightness-90 group-hover:grayscale-0 transition duration-700" 
+                src="/hero_model.png"
               />
             </div>
             <div className="absolute -top-4 -right-4 w-full h-full border border-primary/50 -z-10"></div>
