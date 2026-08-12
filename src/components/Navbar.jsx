@@ -4,11 +4,7 @@ import {
   User, 
   UserCheck, 
   ShieldCheck, 
-  RotateCcw,
-  Sparkles,
-  LogOut,
-  Sliders,
-  ChevronDown
+  RotateCcw
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -24,169 +20,87 @@ export const Navbar = () => {
 
   return (
     <>
-      <header className="neon-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, position: 'sticky', top: 0, zIndex: 900, background: 'rgba(6, 6, 9, 0.92)' }}>
-        
-        {/* Main Navbar Bar */}
-        <div style={{ maxWidth: '1350px', margin: '0 auto', padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
+      <nav className="fixed w-full z-50 bg-background-dark/90 backdrop-blur-md border-b border-white/10 top-0 left-0">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
-          {/* Style Sync Logo - Exact match to screenshots */}
+          {/* Logo matching user template */}
           <div 
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            className="flex items-center space-x-1 cursor-pointer"
             onClick={() => { setActiveRole('customer'); setCustomerTab('landing'); }}
           >
-            <div className="brand-logo-text">
-              <span className="brand-logo-style">Style</span>
-              <span className="brand-logo-sync">Sync</span>
-            </div>
+            <span className="font-display text-2xl font-bold tracking-tight text-white">
+              <span className="text-primary">Style</span> Sync
+            </span>
           </div>
 
-          {/* Center Navigation Links (Matching Screenshot 2: HOME, SERVICES, HOME BOOKING) */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
+          {/* Navigation Links matching user template */}
+          <div className="hidden md:flex items-center space-x-12 text-sm font-medium tracking-widest uppercase">
             <button 
               onClick={() => { setActiveRole('customer'); setCustomerTab('landing'); }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: activeRole === 'customer' && customerTab === 'landing' ? 'var(--accent-red)' : '#d1d5db',
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.95rem',
-                letterSpacing: '0.1em',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase'
-              }}
+              className={`transition-colors cursor-pointer ${activeRole === 'customer' && customerTab === 'landing' ? 'text-primary font-bold' : 'text-slate-300 hover:text-primary'}`}
             >
-              HOME
+              Home
             </button>
-
             <button 
               onClick={() => { setActiveRole('customer'); setCustomerTab('catalog'); }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: activeRole === 'customer' && customerTab === 'catalog' ? 'var(--accent-red)' : '#d1d5db',
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.95rem',
-                letterSpacing: '0.1em',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase'
-              }}
+              className={`transition-colors cursor-pointer ${activeRole === 'customer' && customerTab === 'catalog' ? 'text-primary font-bold' : 'text-slate-300 hover:text-primary'}`}
             >
-              SERVICES
+              Services
             </button>
-
             <button 
               onClick={() => { setActiveRole('customer'); setCustomerTab('book-home'); }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: activeRole === 'customer' && customerTab === 'book-home' ? 'var(--accent-red)' : '#d1d5db',
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.95rem',
-                letterSpacing: '0.1em',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase'
-              }}
+              className={`transition-colors cursor-pointer ${activeRole === 'customer' && customerTab === 'book-home' ? 'text-primary font-bold' : 'text-slate-300 hover:text-primary'}`}
             >
-              HOME BOOKING
+              Home Booking
             </button>
-          </nav>
+          </div>
 
           {/* Right Action & Quick Role Switcher Pill */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="flex items-center space-x-4">
             
-            {/* Direct Switcher Pill for Evaluation */}
-            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.04)', padding: '0.2rem', borderRadius: 'var(--radius-full)', border: '1px solid rgba(255, 0, 60, 0.3)' }}>
+            {/* Quick Role Selector */}
+            <div className="flex bg-white/5 p-1 rounded-full border border-white/10 text-xs">
               <button 
                 onClick={() => { setActiveRole('customer'); setCustomerTab('home'); }}
-                title="View Customer Dashboard (Screenshot 3)"
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-full)',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: activeRole === 'customer' && customerTab !== 'landing' ? 'var(--accent-red)' : 'transparent',
-                  color: activeRole === 'customer' && customerTab !== 'landing' ? '#fff' : 'var(--text-secondary)'
-                }}
+                className={`px-3 py-1 rounded-full font-medium transition-all ${activeRole === 'customer' && customerTab !== 'landing' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                title="Customer Portal"
               >
                 Customer
               </button>
-              
               <button 
                 onClick={() => setActiveRole('staff')}
-                title="View Staff Schedule (Screenshot 1)"
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-full)',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: activeRole === 'staff' ? 'var(--accent-red)' : 'transparent',
-                  color: activeRole === 'staff' ? '#fff' : 'var(--text-secondary)'
-                }}
+                className={`px-3 py-1 rounded-full font-medium transition-all ${activeRole === 'staff' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                title="Staff Portal"
               >
                 Staff
               </button>
-
               <button 
                 onClick={() => setActiveRole('admin')}
-                title="View Admin Dashboard (Screenshot 4)"
-                style={{
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-full)',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: activeRole === 'admin' ? 'var(--accent-red)' : 'transparent',
-                  color: activeRole === 'admin' ? '#fff' : 'var(--text-secondary)'
-                }}
+                className={`px-3 py-1 rounded-full font-medium transition-all ${activeRole === 'admin' ? 'bg-primary text-white' : 'text-slate-400 hover:text-white'}`}
+                title="Admin Portal"
               >
                 Admin
               </button>
             </div>
 
-            {/* Login/Register Pill Button (Matching Screenshot 2) */}
+            {/* Login / Register Button matching user template */}
             <button 
               onClick={() => setShowLoginModal(true)}
-              style={{
-                background: 'transparent',
-                color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.8)',
-                padding: '0.5rem 1.4rem',
-                borderRadius: 'var(--radius-full)',
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.85rem',
-                letterSpacing: '0.08em',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase'
-              }}
-              onMouseEnter={(e) => e.target.style.borderColor = 'var(--accent-red)'}
-              onMouseLeave={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.8)'}
+              className="px-6 py-2 border border-white text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all cursor-pointer text-white"
             >
-              LOGIN / REGISTER
+              Login / Register
             </button>
 
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Login / Role Selection Modal */}
+      {/* Login / Portal Selection Modal */}
       {showLoginModal && (
         <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', textAlign: 'center' }}>
-            <h2 className="font-serif" style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: '#fff' }}>
-              <span style={{ color: 'var(--accent-red)', italic: 'true' }}>Style</span> Sync Access
+            <h2 className="font-display" style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#fff' }}>
+              <span className="text-primary">Style</span> Sync Access
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               Select a portal module to log in securely:
