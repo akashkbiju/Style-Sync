@@ -4,6 +4,9 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AIChatbot } from './components/AIChatbot';
 
+// Auth
+import { AuthPage } from './pages/Auth/AuthPage';
+
 // Customer Pages
 import { LandingPage } from './pages/CustomerPortal/LandingPage';
 import { CustomerHome } from './pages/CustomerPortal/CustomerHome';
@@ -24,7 +27,12 @@ import { PaymentRecords } from './pages/AdminPortal/PaymentRecords';
 import { CustomerFeedback } from './pages/AdminPortal/CustomerFeedback';
 
 const MainContent = () => {
-  const { activeRole, customerTab, adminTab } = useSalon();
+  const { activeRole, customerTab, adminTab, isAuthenticated } = useSalon();
+
+  // Show Auth gate if not logged in
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
 
   return (
     <main style={{ maxWidth: '1350px', margin: '0 auto', padding: '5.5rem 1.5rem 2rem', minHeight: '80vh' }}>
@@ -63,16 +71,24 @@ const MainContent = () => {
 export function App() {
   return (
     <SalonProvider>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Navbar />
-        <div style={{ flex: 1 }}>
-          <MainContent />
-        </div>
-        <AIChatbot />
-        <Footer />
-      </div>
+      <AppInner />
     </SalonProvider>
   );
 }
+
+const AppInner = () => {
+  const { isAuthenticated } = useSalon();
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {isAuthenticated && <Navbar />}
+      <div style={{ flex: 1 }}>
+        <MainContent />
+      </div>
+      {isAuthenticated && <AIChatbot />}
+      {isAuthenticated && <Footer />}
+    </div>
+  );
+};
 
 export default App;
