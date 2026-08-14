@@ -10,6 +10,13 @@ import {
 const SalonContext = createContext();
 
 export const SalonProvider = ({ children }) => {
+  // Auth state
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('stylesync_current_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const isAuthenticated = !!currentUser;
+
   // Active module role: 'customer' | 'staff' | 'admin'
   const [activeRole, setActiveRole] = useState('customer');
 
@@ -18,6 +25,7 @@ export const SalonProvider = ({ children }) => {
 
   // Admin sub-tab: 'dashboard' | 'home-requests' | 'services' | 'staff' | 'payments' | 'feedback'
   const [adminTab, setAdminTab] = useState('dashboard');
+
 
   // Persistent State Loaders
   const [services, setServices] = useState(() => {
@@ -140,6 +148,25 @@ export const SalonProvider = ({ children }) => {
     setFeedback(prev => [fb, ...prev]);
   };
 
+  // Login & Logout
+  const loginUser = (user) => {
+    localStorage.setItem('stylesync_current_user', JSON.stringify(user));
+    setCurrentUser(user);
+    // Auto-switch role
+    if (user.role === 'admin') setActiveRole('admin');
+    else if (user.role === 'staff') setActiveRole('staff');
+    else setActiveRole('customer');
+    setCustomerTab('home');
+    setAdminTab('dashboard');
+  };
+
+  const logoutUser = () => {
+    localStorage.removeItem('stylesync_current_user');
+    setCurrentUser(null);
+    setActiveRole('customer');
+    setCustomerTab('landing');
+  };
+
   // Reset to initial demo data for MCA presentation viva
   const resetDemoData = () => {
     localStorage.removeItem('stylesync_services');
@@ -156,17 +183,25 @@ export const SalonProvider = ({ children }) => {
 
   return (
     <SalonContext.Provider value={{
+      // Auth
+      currentUser,
+      isAuthenticated,
+      loginUser,
+      logoutUser,
+      // Role & Navigation
       activeRole,
       setActiveRole,
       customerTab,
       setCustomerTab,
       adminTab,
       setAdminTab,
+      // Data
       services,
       staff,
       bookings,
       payments,
       feedback,
+      // Actions
       addBooking,
       updateBookingStatus,
       assignStylistToBooking,
