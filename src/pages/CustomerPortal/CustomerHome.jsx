@@ -23,7 +23,7 @@ export const CustomerHome = () => {
     payments, 
     feedback,
     addFeedback,
-    setActiveRole
+    currentUser,
   } = useSalon();
 
   const [activeSideTab, setActiveSideTab] = useState('bookings'); // 'bookings' | 'home-service' | 'payments' | 'feedback' | 'catalog'
@@ -255,7 +255,7 @@ export const CustomerHome = () => {
           <section className="max-w-7xl mx-auto pt-6 border-t border-white/10">
             <div className="mb-8">
               <h2 className="font-display text-4xl font-bold text-white mb-1">
-                Hello, <span className="text-primary">Sarah Jenkins</span>
+                Hello, <span className="text-primary">{currentUser?.name?.split(' ')[0] || 'Guest'}</span>
               </h2>
               <p className="text-slate-400 text-sm">Manage your salon appointments and home visit requests below.</p>
             </div>
@@ -403,7 +403,7 @@ export const CustomerHome = () => {
                 onClick={() => {
                   if(!newFeedbackComment.trim()) return alert('Please enter your review');
                   addFeedback({
-                    customerName: 'Sarah Jenkins',
+                    customerName: currentUser?.name || 'Valued Client',
                     serviceTitle: 'Haircut & Styling',
                     rating: newRating,
                     comment: newFeedbackComment

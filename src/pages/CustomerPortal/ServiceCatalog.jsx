@@ -95,8 +95,7 @@ export const ServiceCatalog = () => {
                 {service.homeServiceAvailable && (
                   <button 
                     onClick={() => setCustomerTab('book-home')} 
-                    className="btn-outline"
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', borderColor: '#c084fc', color: '#c084fc' }}
+                    className="btn-red-outline text-xs px-3 py-1.5"
                     title="Book as Home Service for Elderly"
                   >
                     Home Visit
@@ -104,8 +103,7 @@ export const ServiceCatalog = () => {
                 )}
                 <button 
                   onClick={() => setCustomerTab('book-inshop')} 
-                  className="btn-gold"
-                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                  className="btn-red-neon text-xs px-4 py-1.5"
                 >
                   Book In-Shop
                 </button>

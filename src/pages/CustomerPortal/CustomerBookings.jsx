@@ -30,8 +30,8 @@ export const CustomerBookings = () => {
             <button
               key={st}
               onClick={() => setFilter(st)}
-              className={filter === st ? 'btn-gold' : 'btn-secondary'}
-              style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+              className={filter === st ? 'btn-red-solid' : 'btn-secondary'}
+              style={{ padding: '0.45rem 1rem', fontSize: '0.75rem' }}
             >
               {st}
             </button>
@@ -111,17 +111,17 @@ export const CustomerBookings = () => {
                 
                 <button 
                   onClick={() => setSelectedBookingForTicket(bk)} 
-                  className="btn-secondary" 
-                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                  className="btn-red-outline" 
+                  style={{ padding: '0.45rem 1rem', fontSize: '0.75rem' }}
                 >
-                  <Ticket size={14} /> View Ticket / Invoice
+                  <Ticket size={14} /> View Digital Pass
                 </button>
 
                 {bk.status === 'Completed' && (
                   <button 
                     onClick={() => setSelectedBookingForFeedback(bk)} 
-                    className="btn-gold" 
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                    className="btn-red-neon" 
+                    style={{ padding: '0.45rem 1rem', fontSize: '0.75rem' }}
                   >
                     <Star size={14} /> Rate & Review Service
                   </button>
@@ -135,7 +135,7 @@ export const CustomerBookings = () => {
                       }
                     }} 
                     className="btn-secondary" 
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                    style={{ padding: '0.45rem 1rem', fontSize: '0.75rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }}
                   >
                     <XCircle size={14} /> Cancel Booking
                   </button>
