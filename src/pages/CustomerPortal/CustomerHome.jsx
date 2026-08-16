@@ -310,54 +310,36 @@ export const CustomerHome = () => {
               </h3>
 
               <div className="space-y-4">
-                
-                {/* Appointment 1 */}
-                <div className="flex justify-between items-center p-5 bg-zinc-900/80 border border-white/10 rounded">
-                  <div>
-                    <h4 className="text-white text-lg font-semibold">
-                      Haircut with Stylist Anna
-                    </h4>
-                    <p className="text-slate-400 text-sm mt-1">
-                      Oct 26, 2023 - 10:00 AM
-                    </p>
+                {bookings.length === 0 ? (
+                  <div className="p-8 text-center bg-zinc-900/50 border border-white/10 rounded">
+                    <p className="text-slate-400 text-sm mb-4">No upcoming appointments scheduled yet.</p>
+                    <button 
+                      onClick={() => setCustomerTab('book-inshop')}
+                      className="btn-gold text-xs py-2 px-4"
+                    >
+                      Book Your First Service
+                    </button>
                   </div>
-                  <span className="badge badge-confirmed">
-                    Confirmed
-                  </span>
-                </div>
-
-                {/* Appointment 2 */}
-                <div className="flex justify-between items-center p-5 bg-zinc-900/80 border border-white/10 rounded">
-                  <div>
-                    <h4 className="text-white text-lg font-semibold">
-                      Manicure
-                    </h4>
-                    <p className="text-slate-400 text-sm mt-1">
-                      Nov 2, 2023 - 2:00 PM
-                    </p>
-                  </div>
-                  <span className="badge badge-scheduled">
-                    Scheduled
-                  </span>
-                </div>
-
-                {/* Additional User Bookings */}
-                {bookings.map(b => (
-                  <div key={b.id} className="flex justify-between items-center p-5 bg-zinc-900/80 border border-white/10 rounded">
-                    <div>
-                      <h4 className="text-white text-lg font-semibold">
-                        {b.serviceTitle} {b.stylistName ? `with ${b.stylistName}` : ''} {b.type === 'home-service' ? '(Home Visit)' : ''}
-                      </h4>
-                      <p className="text-slate-400 text-sm mt-1">
-                        {b.date} - {b.time} {b.address ? `| ${b.address}` : ''}
-                      </p>
+                ) : (
+                  bookings.slice(0, 4).map(b => (
+                    <div key={b.id} className="flex justify-between items-center p-5 bg-zinc-900/80 border border-white/10 rounded">
+                      <div>
+                        <h4 className="text-white text-lg font-semibold flex items-center gap-2">
+                          {b.serviceTitle} {b.stylistName ? <span className="text-sm font-normal text-slate-400">with <strong>{b.stylistName}</strong></span> : ''} 
+                          {b.type === 'home-service' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/30">Elderly Home Care</span>
+                          )}
+                        </h4>
+                        <p className="text-slate-400 text-sm mt-1">
+                          {b.date} • {b.time} {b.address && b.address !== 'N/A (In-Shop Salon Visit)' ? `• ${b.address}` : '• In-Shop Salon'}
+                        </p>
+                      </div>
+                      <span className={`badge ${b.status === 'Completed' ? 'badge-completed' : b.status === 'In-Progress' ? 'badge-scheduled' : 'badge-confirmed'}`}>
+                        {b.status}
+                      </span>
                     </div>
-                    <span className={`badge ${b.status === 'Completed' ? 'badge-completed' : 'badge-confirmed'}`}>
-                      {b.status}
-                    </span>
-                  </div>
-                ))}
-
+                  ))
+                )}
               </div>
             </div>
 

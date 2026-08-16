@@ -42,7 +42,9 @@ export const BookHomeService = () => {
     homeServices.find(s => s.seniorCare)?.id || homeServices[0]?.id || ''
   );
   
-  const [selectedStylistName, setSelectedStylistName] = useState(staff[1]?.name || staff[0]?.name || '');
+  // Prefer currently active / logged in staff member if present
+  const activeStaff = staff.find(s => s.isLoggedIn) || staff[0];
+  const [selectedStylistName, setSelectedStylistName] = useState(activeStaff?.name || '');
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -374,26 +376,47 @@ export const BookHomeService = () => {
 
             {/* Stylist Selector */}
             <div className="form-group mb-5">
-              <label className="form-label text-xs">Certified Home Visit Specialist</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="form-label text-xs mb-0">Certified Home Visit Specialist</label>
+                {staff.some(s => s.isLoggedIn) && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Stylist Online in Salon
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {staff.map(stf => {
                   const isSelected = selectedStylistName === stf.name;
+                  const isOnline = stf.isLoggedIn || (currentUser?.role === 'staff' && currentUser?.name === stf.name);
                   return (
                     <div
                       key={stf.id}
                       onClick={() => setSelectedStylistName(stf.name)}
-                      className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all
+                      className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all relative
                         ${isSelected 
                           ? 'border-primary bg-primary/10 text-white ring-1 ring-primary' 
                           : 'border-[var(--border-subtle)] bg-[var(--bg-glass)] text-slate-300 hover:border-white/30'
                         }`}
                     >
-                      <img src={stf.avatar} alt={stf.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                      <div className="relative shrink-0">
+                        <img src={stf.avatar} alt={stf.name} className="w-11 h-11 rounded-full object-cover" />
+                        {isOnline && (
+                          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-black" title="Staff Logged In & Available"></span>
+                        )}
+                      </div>
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{stf.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{stf.name}</p>
+                          {isOnline && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">ONLINE</span>
+                          )}
+                        </div>
                         <p className="text-[10px] truncate" style={{ color: 'var(--text-secondary)' }}>{stf.specialty}</p>
                         <span className="text-[10px] text-amber-400 font-semibold">★ {stf.rating} ({stf.experience})</span>
                       </div>
+                      {isSelected && <Check size={16} className="text-primary shrink-0" />}
                     </div>
                   );
                 })}

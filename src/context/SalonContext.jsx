@@ -62,20 +62,92 @@ export const SalonProvider = ({ children }) => {
     return INITIAL_SERVICES;
   });
 
+  // Legacy fake staff filter to ensure only authentic salon staff exist
+  const LEGACY_FAKE_NAMES = new Set(['Alexander Wright', 'Sophia Chen', 'Marcus Vance', 'Elena Rostova']);
+
   const [staff, setStaff] = useState(() => {
     const saved = localStorage.getItem('stylesync_staff');
+    let staffList = INITIAL_STAFF;
     if (saved) {
-      const parsed = JSON.parse(saved);
-      const existingIds = new Set(parsed.map(s => s.id));
-      const newItems = INITIAL_STAFF.filter(s => !existingIds.has(s.id));
-      return [...parsed, ...newItems];
+      const parsed = JSON.parse(saved).filter(s => !LEGACY_FAKE_NAMES.has(s.name));
+      const existingNames = new Set(parsed.map(s => s.name));
+      const newItems = INITIAL_STAFF.filter(s => !existingNames.has(s.name));
+      staffList = [...parsed, ...newItems];
     }
-    return INITIAL_STAFF;
+
+    // Merge registered staff accounts from localStorage
+    try {
+      const registeredAccounts = JSON.parse(localStorage.getItem('stylesync_staff_accounts') || '[]');
+      registeredAccounts.forEach(acc => {
+        if (!staffList.some(s => s.name === acc.name || s.email === acc.email)) {
+          staffList.push({
+            id: acc.uid || `stf-${Date.now()}`,
+            name: acc.name,
+            role: acc.staffRole || 'Senior Stylist & Care Specialist',
+            specialty: acc.staffRole || 'Hair Styling, Grooming & Senior Home Care',
+            rating: 5.0,
+            experience: 'Certified Specialist',
+            status: 'Available',
+            homeServiceCertified: true,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+            email: acc.email,
+            phone: acc.phone || '',
+            isLoggedIn: false
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('Error merging registered staff accounts:', e);
+    }
+
+    // If current logged-in user is a staff member, mark them as active & logged in
+    try {
+      const savedUser = localStorage.getItem('stylesync_current_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        if (u.role === 'staff') {
+          const idx = staffList.findIndex(s => s.name === u.name || s.email === u.email);
+          if (idx >= 0) {
+            staffList[idx] = { ...staffList[idx], isLoggedIn: true, status: 'Available' };
+          } else {
+            staffList.unshift({
+              id: u.uid || `stf-${Date.now()}`,
+              name: u.name,
+              role: u.staffRole || 'Senior Stylist & Care Specialist',
+              specialty: u.staffRole || 'Hair Styling, Grooming & Senior Home Care',
+              rating: 5.0,
+              experience: 'Certified Specialist',
+              status: 'Available',
+              homeServiceCertified: true,
+              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+              email: u.email,
+              phone: u.phone || '',
+              isLoggedIn: true
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error setting active staff status:', e);
+    }
+
+    return staffList;
   });
 
   const [bookings, setBookings] = useState(() => {
     const saved = localStorage.getItem('stylesync_bookings');
-    return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Remove any bookings with legacy fake staff
+      const cleaned = parsed.map(b => {
+        if (b.stylistName === 'Sophia Chen' || b.stylistName === 'Alexander Wright') {
+          return { ...b, stylistName: 'Akash K Biju' };
+        }
+        return b;
+      });
+      return cleaned;
+    }
+    return INITIAL_BOOKINGS;
   });
 
   const [payments, setPayments] = useState(() => {
@@ -171,6 +243,8 @@ export const SalonProvider = ({ children }) => {
       id: `stf-${Date.now()}`,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       rating: 5.0,
+      status: 'Available',
+      homeServiceCertified: true,
       ...newStaff
     };
     setStaff(prev => [stf, ...prev]);
@@ -195,16 +269,50 @@ export const SalonProvider = ({ children }) => {
   const loginUser = (user) => {
     localStorage.setItem('stylesync_current_user', JSON.stringify(user));
     setCurrentUser(user);
-    // Auto-switch role
-    if (user.role === 'admin') setActiveRole('admin');
-    else if (user.role === 'staff') setActiveRole('staff');
-    else setActiveRole('customer');
+
+    // If staff logs in, ensure they are registered in the active staff roster & marked as logged in
+    if (user.role === 'staff') {
+      setActiveRole('staff');
+      setStaff(prev => {
+        const exists = prev.some(s => s.name === user.name || s.email === user.email);
+        if (exists) {
+          return prev.map(s => 
+            (s.name === user.name || s.email === user.email)
+              ? { ...s, isLoggedIn: true, status: 'Available' }
+              : s
+          );
+        } else {
+          const newStaffEntry = {
+            id: user.uid || `stf-${Date.now()}`,
+            name: user.name,
+            role: user.staffRole || 'Senior Stylist & Care Specialist',
+            specialty: user.staffRole || 'Hair Styling, Grooming & Senior Home Care',
+            rating: 5.0,
+            experience: 'Certified Specialist',
+            status: 'Available',
+            homeServiceCertified: true,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+            email: user.email,
+            phone: user.phone || '',
+            isLoggedIn: true
+          };
+          return [newStaffEntry, ...prev];
+        }
+      });
+    } else if (user.role === 'admin') {
+      setActiveRole('admin');
+    } else {
+      setActiveRole('customer');
+    }
+
     setCustomerTab('home');
     setAdminTab('dashboard');
   };
 
   const logoutUser = () => {
     localStorage.removeItem('stylesync_current_user');
+    // Set all staff isLoggedIn to false
+    setStaff(prev => prev.map(s => ({ ...s, isLoggedIn: false })));
     setCurrentUser(null);
     setActiveRole('customer');
     setCustomerTab('landing');

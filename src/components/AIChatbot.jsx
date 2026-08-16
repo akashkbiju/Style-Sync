@@ -47,8 +47,12 @@ export const AIChatbot = () => {
     }
 
     // Smart Knowledge Base Fallback
-    if (q.includes('elderly') || q.includes('home service') || q.includes('home')) {
-      return '🏡 **StyleSync Home Service Special**: We offer dedicated salon visits for elderly citizens and clients unable to visit directly! You can request a specialist to visit your home with full sanitation & care. Go to "Home Booking" in the menu to submit your home address.';
+    if (q.includes('elderly') || q.includes('home service') || q.includes('home') || q.includes('senior')) {
+      return '🏡 **StyleSync Senior Citizen Home Care**: We provide certified gentle home salon visits for elderly citizens and bedridden clients! Our specialists (Akash K Biju, Ananya Nair) arrive with sanitized tool kits, zero-mess inflatable basins, and gentle care. Go to "Elderly Home Booking" in the menu to schedule a home visit.';
+    }
+
+    if (q.includes('staff') || q.includes('stylist') || q.includes('specialist')) {
+      return '✂️ **StyleSync Master Specialists**:\n• **Akash K Biju** — Senior Master Stylist & Director (⭐5.0)\n• **Ananya Nair** — Senior Ayur-Therapist & Elderly Care (⭐4.98)\n• **Rahul Krishna** — Precision Grooming Specialist (⭐4.90)\n• **Meera Varma** — Skincare & Reflexologist (⭐4.95)\n\nYou can select any of our certified specialists when booking!';
     }
 
     if (q.includes('price') || q.includes('cost') || q.includes('service') || q.includes('haircut') || q.includes('facial')) {
@@ -57,11 +61,11 @@ export const AIChatbot = () => {
     }
 
     if (q.includes('pay') || q.includes('razorpay') || q.includes('upi') || q.includes('card') || q.includes('cash')) {
-      return '💳 **Payment Methods**: We support secure online digital payments powered by Razorpay (UPI, Credit/Debit Cards, NetBanking) as well as Cash on Service completion!';
+      return '💳 **Payment Methods**: We support secure online digital payments powered by Razorpay (UPI, Google Pay, PhonePe, Cards, NetBanking) with instant digital receipt generation!';
     }
 
     if (q.includes('hour') || q.includes('time') || q.includes('open') || q.includes('address') || q.includes('location')) {
-      return '⏰ **Salon Operating Hours**: Open Daily 09:00 AM – 09:00 PM.\n📍 **Location**: High-Fashion Promenade, Indiranagar, Bengaluru.';
+      return '⏰ **Salon Operating Hours**: Open Daily 09:00 AM – 09:00 PM.\n📍 **Location**: StyleSync Luxury Studio, Collectorate Junction, Kottayam, Kerala - 686501.';
     }
 
     if (q.includes('hi') || q.includes('hello') || q.includes('hey')) {

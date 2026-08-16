@@ -8,56 +8,43 @@ import {
   Clock,
   MapPin,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Phone,
+  Scissors,
+  Home,
+  Check
 } from 'lucide-react';
 
 export const StaffDashboard = () => {
-  const { bookings, updateBookingStatus } = useSalon();
+  const { bookings, updateBookingStatus, currentUser, staff } = useSalon();
   
   const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'support'
   const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState(null);
-  const [newStatusValue, setNewStatusValue] = useState('Active');
+  const [newStatusValue, setNewStatusValue] = useState('In-Progress');
 
-  // Hardcoded items matching Screenshot 1 + combined dynamic bookings
-  const scheduleItems = [
-    {
-      id: 'sch-1',
-      time: '9:00 AM',
-      serviceTitle: 'Haircut',
-      customerName: 'Sarah Jenkins',
-      status: 'Active',
-      specialNotes: 'Prefers layered fade haircut'
-    },
-    {
-      id: 'sch-2',
-      time: '10:30 AM',
-      serviceTitle: 'Coloring',
-      customerName: 'Jessica Lee',
-      status: 'Scheduled',
-      specialNotes: 'Highlights consultation'
-    },
-    {
-      id: 'sch-3',
-      time: '1:00 PM',
-      serviceTitle: 'Styling',
-      customerName: 'Emily Davis',
-      status: 'Scheduled',
-      specialNotes: 'Blowout and curls'
-    },
-    {
-      id: 'sch-4',
-      time: '3:00 PM',
-      serviceTitle: 'Spa',
-      customerName: 'Olivia White',
-      status: 'Scheduled',
-      specialNotes: 'Relief head massage'
-    }
-  ];
+  // Find staff profile
+  const staffProfile = staff.find(s => s.name === currentUser?.name || s.email === currentUser?.email) || {
+    name: currentUser?.name || 'Stylist Specialist',
+    role: currentUser?.staffRole || 'Senior Master Stylist',
+    rating: 5.0,
+    specialty: 'Hair Styling & Senior Citizen Home Care'
+  };
+
+  // Filter bookings for this logged in staff or all salon bookings if unassigned
+  const staffBookings = bookings.filter(b => 
+    !b.stylistName || b.stylistName === staffProfile.name || b.stylistName.toLowerCase().includes(staffProfile.name.toLowerCase().split(' ')[0])
+  );
+  const displayBookings = staffBookings.length > 0 ? staffBookings : bookings;
+
+  // Extract unique customers from actual bookings
+  const uniqueCustomers = Array.from(
+    new Map(bookings.map(b => [b.customerName, b])).values()
+  );
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2.5rem', minHeight: '80vh', padding: '1rem 0' }}>
       
-      {/* Left Sidebar (Matching Screenshot 1 Left Navigation) */}
+      {/* Left Sidebar */}
       <aside className="neon-panel" style={{ padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(10, 10, 15, 0.9)' }}>
         
         {/* Style Sync Logo */}
@@ -65,6 +52,9 @@ export const StaffDashboard = () => {
           <div className="brand-logo-text">
             <span className="brand-logo-style" style={{ fontSize: '1.4rem' }}>Style</span>
             <span className="brand-logo-sync" style={{ fontSize: '1.25rem' }}>Sync</span>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', marginTop: '0.2rem' }}>
+            Staff Portal: <strong>{staffProfile.name}</strong>
           </div>
         </div>
 
@@ -89,7 +79,7 @@ export const StaffDashboard = () => {
             transition: 'all 0.2s ease'
           }}
         >
-          <Calendar size={18} /> My Schedule
+          <Calendar size={18} /> My Schedule ({displayBookings.length})
         </button>
 
         <button
@@ -112,7 +102,7 @@ export const StaffDashboard = () => {
             transition: 'all 0.2s ease'
           }}
         >
-          <CheckSquare size={18} /> Task List
+          <CheckSquare size={18} /> Task Checklist
         </button>
 
         <button
@@ -135,7 +125,7 @@ export const StaffDashboard = () => {
             transition: 'all 0.2s ease'
           }}
         >
-          <Users size={18} /> Customer Details
+          <Users size={18} /> Clients ({uniqueCustomers.length})
         </button>
 
         <button
@@ -163,25 +153,44 @@ export const StaffDashboard = () => {
 
       </aside>
 
-      {/* Main Content Area (Matching Screenshot 1 Schedule View) */}
+      {/* Main Content Area */}
       <main style={{ width: '100%' }}>
         
         {activeSideTab === 'schedule' ? (
           <div>
             
-            {/* Header: YOUR SCHEDULE FOR TODAY */}
-            <h1 className="font-serif" style={{
-              fontSize: '2.4rem',
-              fontWeight: 700,
-              color: '#ffffff',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              marginBottom: '2.5rem'
-            }}>
-              YOUR SCHEDULE FOR TODAY
-            </h1>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h1 className="font-serif" style={{
+                  fontSize: '2.2rem',
+                  fontWeight: 700,
+                  color: '#ffffff',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  margin: 0
+                }}>
+                  YOUR APPOINTMENT SCHEDULE
+                </h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.3rem' }}>
+                  Live appointments assigned to <strong>{staffProfile.name}</strong> • Real-time synchronization
+                </p>
+              </div>
 
-            {/* Vertical Timeline Structure (Matching Screenshot 1) */}
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <span className="badge badge-confirmed" style={{ fontSize: '0.8rem' }}>
+                  Total: {displayBookings.length}
+                </span>
+                <span className="badge badge-inshop" style={{ fontSize: '0.8rem' }}>
+                  In-Shop: {displayBookings.filter(b => b.type === 'in-shop').length}
+                </span>
+                <span className="badge badge-home" style={{ fontSize: '0.8rem' }}>
+                  Home Care: {displayBookings.filter(b => b.type === 'home-service').length}
+                </span>
+              </div>
+            </div>
+
+            {/* Vertical Timeline Structure */}
             <div style={{ position: 'relative', paddingLeft: '2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               
               {/* Red Vertical Timeline Guide Line */}
@@ -194,125 +203,114 @@ export const StaffDashboard = () => {
                 background: 'rgba(255, 0, 60, 0.4)'
               }} />
 
-              {/* Schedule Item 1 (Active Item matching Screenshot 1) */}
-              <div style={{ position: 'relative' }}>
-                {/* Glowing Red Dot Indicator on timeline line */}
-                <div style={{
-                  position: 'absolute',
-                  left: '-28px',
-                  top: '25px',
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: 'var(--accent-red)',
-                  boxShadow: '0 0 12px rgba(255, 0, 60, 0.9)'
-                }} />
-
-                <div className="neon-card" style={{
-                  borderLeft: '8px solid var(--accent-red)',
-                  borderColor: 'var(--accent-red)',
-                  boxShadow: '0 0 25px rgba(255, 0, 60, 0.3)',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  maxWidth: '520px'
-                }}>
-                  <div style={{ fontSize: '1.15rem', color: '#ffffff', fontWeight: 500, lineHeight: 1.5 }}>
-                    {scheduleItems[0].time} - {scheduleItems[0].serviceTitle} -<br />
-                    {scheduleItems[0].customerName} -<br />
-                    [Status: <span style={{ color: '#34d399', fontWeight: 700 }}>Active</span>]
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                      setSelectedBookingForUpdate(scheduleItems[0]);
-                      setNewStatusValue('Active');
-                    }}
-                    className="btn-red-neon"
-                    style={{
-                      width: '100%',
-                      padding: '0.85rem',
-                      fontSize: '0.9rem',
-                      letterSpacing: '0.08em'
-                    }}
-                  >
-                    UPDATE STATUS
-                  </button>
+              {displayBookings.length === 0 ? (
+                <div className="neon-card" style={{ padding: '2rem', textAlign: 'center' }}>
+                  <p style={{ color: 'var(--text-secondary)' }}>No scheduled appointments at this moment.</p>
                 </div>
-              </div>
+              ) : (
+                displayBookings.map((b, idx) => {
+                  const isHome = b.type === 'home-service';
+                  const isCompleted = b.status === 'Completed';
+                  const isInProgress = b.status === 'In-Progress' || b.status === 'Active';
 
-              {/* Schedule Item 2 */}
-              <div style={{ position: 'relative' }}>
-                <div className="neon-card" style={{
-                  borderLeft: '8px solid var(--accent-red)',
-                  padding: '1.4rem 1.5rem',
-                  maxWidth: '520px'
-                }}>
-                  <div style={{ fontSize: '1.15rem', color: '#ffffff', fontWeight: 500, lineHeight: 1.5 }}>
-                    {scheduleItems[1].time} - {scheduleItems[1].serviceTitle} -<br />
-                    {scheduleItems[1].customerName}
-                  </div>
-                </div>
-              </div>
+                  return (
+                    <div key={b.id} style={{ position: 'relative' }}>
+                      
+                      {/* Glowing Dot Indicator on timeline */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '-28px',
+                        top: '25px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        background: isCompleted ? '#10b981' : isInProgress ? '#38bdf8' : 'var(--accent-red)',
+                        boxShadow: `0 0 12px ${isCompleted ? 'rgba(16, 185, 129, 0.9)' : isInProgress ? 'rgba(56, 189, 248, 0.9)' : 'rgba(255, 0, 60, 0.9)'}`
+                      }} />
 
-              {/* Schedule Item 3 */}
-              <div style={{ position: 'relative' }}>
-                <div className="neon-card" style={{
-                  borderLeft: '8px solid var(--accent-red)',
-                  padding: '1.4rem 1.5rem',
-                  maxWidth: '520px'
-                }}>
-                  <div style={{ fontSize: '1.15rem', color: '#ffffff', fontWeight: 500, lineHeight: 1.5 }}>
-                    {scheduleItems[2].time} - {scheduleItems[2].serviceTitle} -<br />
-                    {scheduleItems[2].customerName}
-                  </div>
-                </div>
-              </div>
+                      <div className="neon-card" style={{
+                        borderLeft: `8px solid ${isCompleted ? '#10b981' : isInProgress ? '#38bdf8' : 'var(--accent-red)'}`,
+                        borderColor: isCompleted ? '#10b981' : isInProgress ? '#38bdf8' : 'var(--accent-red)',
+                        boxShadow: `0 0 20px ${isCompleted ? 'rgba(16, 185, 129, 0.15)' : isInProgress ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 0, 60, 0.2)'}`,
+                        padding: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.85rem',
+                        maxWidth: '620px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div>
+                            <div style={{ fontSize: '1.2rem', color: '#ffffff', fontWeight: 600 }}>
+                              {b.time} — {b.serviceTitle}
+                            </div>
+                            <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              Client: <strong style={{ color: '#fff' }}>{b.customerName}</strong> {b.customerPhone ? `(${b.customerPhone})` : ''}
+                            </div>
+                          </div>
 
-              {/* Schedule Item 4 */}
-              <div style={{ position: 'relative' }}>
-                <div className="neon-card" style={{
-                  borderLeft: '8px solid var(--accent-red)',
-                  padding: '1.4rem 1.5rem',
-                  maxWidth: '520px'
-                }}>
-                  <div style={{ fontSize: '1.15rem', color: '#ffffff', fontWeight: 500, lineHeight: 1.5 }}>
-                    {scheduleItems[3].time} - {scheduleItems[3].serviceTitle} -<br />
-                    {scheduleItems[3].customerName}
-                  </div>
-                </div>
-              </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            {isHome ? (
+                              <span className="badge badge-home" style={{ fontSize: '0.75rem' }}>
+                                <Home size={12} /> Senior Home Care
+                              </span>
+                            ) : (
+                              <span className="badge badge-inshop" style={{ fontSize: '0.75rem' }}>
+                                <Scissors size={12} /> In-Shop
+                              </span>
+                            )}
+                            <span className={`badge ${isCompleted ? 'badge-completed' : isInProgress ? 'badge-scheduled' : 'badge-confirmed'}`} style={{ fontSize: '0.75rem' }}>
+                              {b.status}
+                            </span>
+                          </div>
+                        </div>
 
-              {/* Dynamic Bookings added from customer requests */}
-              {bookings.filter(b => b.type === 'home-service').map(b => (
-                <div key={b.id} style={{ position: 'relative' }}>
-                  <div className="neon-card" style={{
-                    borderLeft: '8px solid var(--accent-red)',
-                    padding: '1.4rem 1.5rem',
-                    maxWidth: '520px'
-                  }}>
-                    <div style={{ fontSize: '1.05rem', color: '#ffffff', fontWeight: 500 }}>
-                      {b.time} - {b.serviceTitle} (Elderly Home Service) -<br />
-                      {b.customerName} -<br />
-                      [Status: <span style={{ color: '#38bdf8' }}>{b.status}</span>]
+                        {/* Home Care Address Details */}
+                        {isHome && b.address && b.address !== 'N/A (In-Shop Salon Visit)' && (
+                          <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                            <div style={{ color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <MapPin size={14} /> Client Address:
+                            </div>
+                            <div style={{ color: '#e2e8f0', marginTop: '0.2rem' }}>
+                              {b.address} {b.landmark ? `(Landmark: ${b.landmark})` : ''}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Special Care Notes */}
+                        {b.specialNotes && (
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.75rem', borderRadius: '4px' }}>
+                            📝 <em>{b.specialNotes}</em>
+                          </div>
+                        )}
+
+                        {/* Stylist & Payment Info */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.6rem' }}>
+                          <span>Assigned: <strong>{b.stylistName || staffProfile.name}</strong></span>
+                          <span>Fee: <strong style={{ color: 'var(--accent-gold)' }}>₹{b.amount}</strong> ({b.paymentStatus || 'Paid'})</span>
+                        </div>
+
+                        {/* Action Button */}
+                        <button 
+                          onClick={() => {
+                            setSelectedBookingForUpdate(b);
+                            setNewStatusValue(b.status === 'Pending' ? 'In-Progress' : b.status === 'In-Progress' ? 'Completed' : 'In-Progress');
+                          }}
+                          className="btn-red-neon"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            fontSize: '0.85rem',
+                            letterSpacing: '0.08em',
+                            marginTop: '0.4rem'
+                          }}
+                        >
+                          UPDATE STATUS
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
-                      📍 {b.address}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedBookingForUpdate(b);
-                        setNewStatusValue(b.status);
-                      }}
-                      className="btn-red-outline"
-                      style={{ marginTop: '0.75rem', width: '100%', padding: '0.5rem', fontSize: '0.8rem' }}
-                    >
-                      UPDATE STATUS
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  );
+                })
+              )}
 
             </div>
 
@@ -320,13 +318,19 @@ export const StaffDashboard = () => {
         ) : activeSideTab === 'tasks' ? (
           <div className="neon-panel" style={{ padding: '2rem' }}>
             <h2 className="font-serif" style={{ fontSize: '1.75rem', color: '#fff', marginBottom: '1.5rem' }}>
-              Stylist Daily Task Checklist
+              Stylist Daily Sanitization & Care Checklist
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {['Sanitize hair cutting scissors and hot tools', 'Prepare Elderly Home Visit Care kit', 'Review afternoon appointment notes', 'Check stock of gold hydration masks'].map((task, idx) => (
+              {[
+                'Sanitize all hair trimming scissors, clippers & combs in UV sterilizer',
+                'Prepare Senior Home Visit kit: inflatable shampoo basin, disposable gowns & towels',
+                'Check stock of organic Gold glow hydration packs and herbal massage oils',
+                'Verify temperature and emergency contact for elderly client home visits',
+                'Inspect Razorpay electronic transaction tokens on completed appointments'
+              ].map((task, idx) => (
                 <div key={idx} className="neon-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <input type="checkbox" defaultChecked={idx < 2} style={{ width: '18px', height: '18px', accentColor: 'var(--accent-red)' }} />
-                  <span style={{ color: '#fff', fontSize: '1rem' }}>{task}</span>
+                  <input type="checkbox" defaultChecked={idx < 2} style={{ width: '18px', height: '18px', accentColor: 'var(--accent-red)', cursor: 'pointer' }} />
+                  <span style={{ color: '#fff', fontSize: '0.95rem' }}>{task}</span>
                 </div>
               ))}
             </div>
@@ -334,16 +338,26 @@ export const StaffDashboard = () => {
         ) : activeSideTab === 'customers' ? (
           <div className="neon-panel" style={{ padding: '2rem' }}>
             <h2 className="font-serif" style={{ fontSize: '1.75rem', color: '#fff', marginBottom: '1.5rem' }}>
-              Assigned Customer Profiles
+              Client Directory & History
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
-              {['Sarah Jenkins', 'Jessica Lee', 'Emily Davis', 'Olivia White', 'Robert Vance (Elderly Client)'].map((cName, idx) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              {uniqueCustomers.map((c, idx) => (
                 <div key={idx} className="neon-card">
-                  <h4 className="font-serif" style={{ fontSize: '1.15rem', color: '#fff' }}>{cName}</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                    Preferred Stylist: Anna / Senior Roster
+                  <h4 className="font-serif" style={{ fontSize: '1.15rem', color: '#fff' }}>{c.customerName}</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                    📞 {c.customerPhone || 'Contact on file'}
                   </p>
-                  <span className="badge badge-confirmed" style={{ marginTop: '0.75rem' }}>Regular Client</span>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Latest Service: {c.serviceTitle}
+                  </p>
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span className="badge badge-confirmed" style={{ fontSize: '0.7rem' }}>
+                      {c.type === 'home-service' ? 'Senior Care Client' : 'In-Shop Client'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)' }}>
+                      ₹{c.amount}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -358,7 +372,7 @@ export const StaffDashboard = () => {
             </p>
             <div className="form-group">
               <label className="form-label">Support Ticket Details</label>
-              <textarea className="form-textarea" rows={4} placeholder="Describe issue for Salon Admin..." />
+              <textarea className="form-textarea" rows={4} placeholder="Describe issue for Salon Admin or Manager..." />
             </div>
             <button className="btn-red-neon" onClick={() => alert('Support ticket dispatched to Admin!')}>
               Submit Staff Ticket
@@ -371,25 +385,25 @@ export const StaffDashboard = () => {
       {/* UPDATE STATUS Modal */}
       {selectedBookingForUpdate && (
         <div className="modal-overlay" onClick={() => setSelectedBookingForUpdate(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
             <h3 className="font-serif" style={{ fontSize: '1.5rem', color: '#fff', marginBottom: '0.5rem' }}>
               Update Service Status
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-              Service: <strong>{selectedBookingForUpdate.serviceTitle}</strong> ({selectedBookingForUpdate.customerName})
+              Booking: <strong>{selectedBookingForUpdate.serviceTitle}</strong> for <strong>{selectedBookingForUpdate.customerName}</strong>
             </p>
 
             <div className="form-group">
-              <label className="form-label">Select New Status</label>
+              <label className="form-label">Select Current Status</label>
               <select 
                 className="form-select"
                 value={newStatusValue}
                 onChange={e => setNewStatusValue(e.target.value)}
               >
-                <option value="Active">Active (In Service)</option>
-                <option value="In-Progress">In-Progress</option>
-                <option value="Completed">Completed</option>
-                <option value="Scheduled">Scheduled / Pending</option>
+                <option value="Pending">Pending (Scheduled)</option>
+                <option value="In-Progress">In-Progress (Stylist Assigned / In Service)</option>
+                <option value="Completed">Completed (Finished & Satisfied)</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
 
@@ -400,14 +414,11 @@ export const StaffDashboard = () => {
               <button 
                 className="btn-red-neon"
                 onClick={() => {
-                  if(selectedBookingForUpdate.id.startsWith('BK-')) {
-                    updateBookingStatus(selectedBookingForUpdate.id, newStatusValue);
-                  }
+                  updateBookingStatus(selectedBookingForUpdate.id, newStatusValue);
                   setSelectedBookingForUpdate(null);
-                  alert(`Status successfully updated to ${newStatusValue}`);
                 }}
               >
-                Save Status
+                Save & Synchronize
               </button>
             </div>
 
