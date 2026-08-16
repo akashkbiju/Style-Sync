@@ -10,6 +10,22 @@ import {
 const SalonContext = createContext();
 
 export const SalonProvider = ({ children }) => {
+  // Theme state: 'dark' | 'light'
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('stylesync_theme');
+    return savedTheme || 'dark';
+  });
+
+  // Apply theme to root html element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('stylesync_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Auth state
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('stylesync_current_user');
@@ -17,25 +33,44 @@ export const SalonProvider = ({ children }) => {
   });
   const isAuthenticated = !!currentUser;
 
-  // Active module role: 'customer' | 'staff' | 'admin'
-  const [activeRole, setActiveRole] = useState('customer');
+  // Active module role — locked to logged-in user's role, never manually switchable
+  const [activeRole, setActiveRole] = useState(() => {
+    const saved = localStorage.getItem('stylesync_current_user');
+    if (saved) {
+      const user = JSON.parse(saved);
+      return user.role || 'customer';
+    }
+    return 'customer';
+  });
 
   // Customer sub-tab: 'landing' | 'home' | 'catalog' | 'book-inshop' | 'book-home' | 'my-bookings'
-  const [customerTab, setCustomerTab] = useState('landing');
+  const [customerTab, setCustomerTab] = useState('home');
 
   // Admin sub-tab: 'dashboard' | 'home-requests' | 'services' | 'staff' | 'payments' | 'feedback'
   const [adminTab, setAdminTab] = useState('dashboard');
 
-
-  // Persistent State Loaders
+  // Persistent State Loaders with smart merging for new seed items
   const [services, setServices] = useState(() => {
     const saved = localStorage.getItem('stylesync_services');
-    return saved ? JSON.parse(saved) : INITIAL_SERVICES;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge any new seed services that don't exist in local storage
+      const existingIds = new Set(parsed.map(s => s.id));
+      const newItems = INITIAL_SERVICES.filter(s => !existingIds.has(s.id));
+      return [...parsed, ...newItems];
+    }
+    return INITIAL_SERVICES;
   });
 
   const [staff, setStaff] = useState(() => {
     const saved = localStorage.getItem('stylesync_staff');
-    return saved ? JSON.parse(saved) : INITIAL_STAFF;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const existingIds = new Set(parsed.map(s => s.id));
+      const newItems = INITIAL_STAFF.filter(s => !existingIds.has(s.id));
+      return [...parsed, ...newItems];
+    }
+    return INITIAL_STAFF;
   });
 
   const [bookings, setBookings] = useState(() => {
@@ -94,10 +129,12 @@ export const SalonProvider = ({ children }) => {
         id: paymentDetails.id || `pay_${Date.now()}`,
         bookingId: bookingId,
         customerName: newBookingData.customerName,
+        serviceTitle: newBookingData.serviceTitle,
         amount: newBookingData.amount,
         method: paymentDetails.method || 'Razorpay Online',
         status: 'Success',
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        date: new Date().toISOString().substring(0, 10),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setPayments(prev => [paymentEntry, ...prev]);
     }
@@ -105,12 +142,16 @@ export const SalonProvider = ({ children }) => {
     return newBooking;
   };
 
-  const updateBookingStatus = (id, newStatus) => {
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+  const updateBookingStatus = (bookingId, newStatus) => {
+    setBookings(prev => 
+      prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b)
+    );
   };
 
   const assignStylistToBooking = (bookingId, stylistName) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, stylistName } : b));
+    setBookings(prev => 
+      prev.map(b => b.id === bookingId ? { ...b, stylistName: stylistName } : b)
+    );
   };
 
   const addService = (newService) => {
@@ -121,22 +162,24 @@ export const SalonProvider = ({ children }) => {
     setServices(prev => [srv, ...prev]);
   };
 
-  const deleteService = (id) => {
-    setServices(prev => prev.filter(s => s.id !== id));
+  const deleteService = (serviceId) => {
+    setServices(prev => prev.filter(s => s.id !== serviceId));
   };
 
   const addStaffMember = (newStaff) => {
     const stf = {
       id: `stf-${Date.now()}`,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       rating: 5.0,
-      status: 'Available',
       ...newStaff
     };
     setStaff(prev => [stf, ...prev]);
   };
 
-  const updateStaffStatus = (id, status) => {
-    setStaff(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+  const updateStaffStatus = (staffId, status) => {
+    setStaff(prev => 
+      prev.map(s => s.id === staffId ? { ...s, status } : s)
+    );
   };
 
   const addFeedback = (newFb) => {
@@ -167,30 +210,18 @@ export const SalonProvider = ({ children }) => {
     setCustomerTab('landing');
   };
 
-  // Reset to initial demo data for MCA presentation viva
-  const resetDemoData = () => {
-    localStorage.removeItem('stylesync_services');
-    localStorage.removeItem('stylesync_staff');
-    localStorage.removeItem('stylesync_bookings');
-    localStorage.removeItem('stylesync_payments');
-    localStorage.removeItem('stylesync_feedback');
-    setServices(INITIAL_SERVICES);
-    setStaff(INITIAL_STAFF);
-    setBookings(INITIAL_BOOKINGS);
-    setPayments(INITIAL_PAYMENTS);
-    setFeedback(INITIAL_FEEDBACK);
-  };
-
   return (
     <SalonContext.Provider value={{
+      // Theme
+      theme,
+      toggleTheme,
       // Auth
       currentUser,
       isAuthenticated,
       loginUser,
       logoutUser,
-      // Role & Navigation
+      // Role & Navigation (activeRole is READ-ONLY externally — set only on login)
       activeRole,
-      setActiveRole,
       customerTab,
       setCustomerTab,
       adminTab,
@@ -210,7 +241,6 @@ export const SalonProvider = ({ children }) => {
       addStaffMember,
       updateStaffStatus,
       addFeedback,
-      resetDemoData
     }}>
       {children}
     </SalonContext.Provider>

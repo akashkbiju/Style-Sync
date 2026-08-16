@@ -1,169 +1,246 @@
 import React, { useState } from 'react';
 import { useSalon } from '../../context/SalonContext';
-import { Eye, EyeOff, Scissors, User, Users, ShieldCheck, ArrowRight, CheckCircle, Lock } from 'lucide-react';
+import {
+  Eye, EyeOff, Scissors, User, Users, ShieldCheck,
+  ArrowRight, CheckCircle, Lock, Phone, Mail, AlertCircle
+} from 'lucide-react';
+import {
+  firebaseRegister,
+  firebaseLogin,
+  validateEmail,
+  validatePhone,
+  validatePassword,
+  passwordStrength,
+} from '../../firebase/authService';
 
-// ─── Seeded Demo Accounts ───────────────────────────────────────────────────
-const DEMO_ACCOUNTS = {
-  customer: [
-    { email: 'sarah@email.com', password: 'sarah123', name: 'Sarah Jenkins', phone: '9876543210' },
-    { email: 'priya@email.com', password: 'priya123', name: 'Priya Sharma',  phone: '9123456789' },
-  ],
-  staff: [
-    { email: 'anna@stylesync.com', password: 'anna123', name: 'Anna Kapoor', role: 'Senior Stylist' },
-    { email: 'raj@stylesync.com',  password: 'raj123',  name: 'Raj Verma',   role: 'Colorist' },
-  ],
-};
-
-const ADMIN_CREDENTIALS = {
-  email: 'admin@stylesync.com',
+// ─── Admin Credentials (never stored in DB, hardcoded in source) ───────────────
+const ADMIN = {
+  email:    'admin@stylesync.com',
   password: 'Admin@2025',
-  name: 'Admin — StyleSync',
+  name:     'Admin — StyleSync',
 };
 
-// ─── Utility: random booking-ID-like token ───────────────────────────────────
-const uid = () => Math.floor(100000 + Math.random() * 900000).toString();
+// ─── Validation: run all rules, return array of error strings ──────────────────
+const runValidations = ({ mode, role, form }) => {
+  const errors = {};
 
+  // ── Email ──────────────────────────────────────────────────────────────
+  if (!form.email) {
+    errors.email = 'Email is required.';
+  } else if (!validateEmail(form.email)) {
+    errors.email = 'Enter a valid email address (e.g. name@domain.com).';
+  }
+
+  // ── Password ───────────────────────────────────────────────────────────
+  if (!form.password) {
+    errors.password = 'Password is required.';
+  } else if (mode === 'register') {
+    const { valid, message } = validatePassword(form.password);
+    if (!valid) errors.password = message;
+  }
+
+  if (mode === 'register') {
+    // ── Full Name ────────────────────────────────────────────────────────
+    if (!form.name.trim()) errors.name = 'Full name is required.';
+
+    // ── Confirm Password ─────────────────────────────────────────────────
+    if (!form.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.';
+    } else if (form.password !== form.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match.';
+    }
+
+    // ── Phone (customer only) ────────────────────────────────────────────
+    if (role === 'customer' && form.phone) {
+      if (!validatePhone(form.phone)) {
+        errors.phone = 'Enter a valid 10-digit Indian mobile number (starts with 6-9).';
+      }
+    }
+
+    // ── Staff Role ───────────────────────────────────────────────────────
+    if (role === 'staff' && !form.staffRole) {
+      errors.staffRole = 'Please select your specialisation.';
+    }
+  }
+
+  return errors;
+};
+
+// ─── Password Strength Meter Component ────────────────────────────────────────
+const StrengthMeter = ({ password }) => {
+  if (!password) return null;
+  const s = passwordStrength(password);
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: s.width, backgroundColor: s.color }}
+        />
+      </div>
+      <p className="text-xs" style={{ color: s.color }}>
+        Strength: <span className="font-semibold">{s.label}</span>
+      </p>
+    </div>
+  );
+};
+
+// ─── Field Error Component ─────────────────────────────────────────────────────
+const FieldError = ({ msg }) =>
+  msg ? (
+    <p className="flex items-center gap-1 text-xs text-rose-400 mt-1">
+      <AlertCircle size={12} /> {msg}
+    </p>
+  ) : null;
+
+// ─── Main AuthPage ─────────────────────────────────────────────────────────────
 export const AuthPage = () => {
-  // 'login' | 'register'
-  const [mode, setMode] = useState('login');
-  // 'customer' | 'staff' | 'admin'
-  const [selectedRole, setSelectedRole] = useState('customer');
+  const [mode, setMode] = useState('login');           // 'login' | 'register'
+  const [selectedRole, setSelectedRole] = useState('customer'); // 'customer' | 'staff'
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [error, setError] = useState('');
+  const [globalError, setGlobalError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { loginUser } = useSalon();
 
-  // Form fields
   const [form, setForm] = useState({
     name: '', email: '', phone: '', staffRole: '',
     password: '', confirmPassword: '',
   });
 
-  const set = (field) => (e) => {
-    setError('');
+  const setField = (field) => (e) => {
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }));
+    setGlobalError('');
     setForm((p) => ({ ...p, [field]: e.target.value }));
   };
 
+  const resetForm = (keepSuccess = false) => {
+    setForm({ name: '', email: '', phone: '', staffRole: '', password: '', confirmPassword: '' });
+    setFieldErrors({});
+    setGlobalError('');
+    if (!keepSuccess) setSuccess('');
+  };
+
+  const friendlyFirebaseError = (err) => {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    switch (code) {
+      case 'auth/email-already-in-use':    return 'An account with this email already exists.';
+      case 'auth/invalid-email':           return 'Invalid email address format.';
+      case 'auth/weak-password':           return 'Password is too weak. Use at least 8 characters.';
+      case 'auth/user-not-found':          return 'No account found with this email.';
+      case 'auth/wrong-password':          return 'Incorrect password. Please try again.';
+      case 'auth/invalid-credential':      return 'Invalid email or password. Please try again.';
+      case 'auth/too-many-requests':       return 'Too many failed attempts. Please try again later.';
+      case 'auth/network-request-failed':  return 'Network error. Please check your internet connection.';
+      case 'auth/operation-not-allowed':   return 'Email/Password sign-in is disabled. Please enable it in Firebase Console -> Authentication -> Sign-in method.';
+      default:                             return msg || 'Something went wrong. Please try again.';
+    }
+  };
+
+  // ── Admin check ────────────────────────────────────────────────────────────
+  const isAdminCredential = (email, password) =>
+    email.trim() === ADMIN.email && password === ADMIN.password;
+
   // ── Login ──────────────────────────────────────────────────────────────────
-  const handleLogin = () => {
-    setError('');
-    if (!form.email || !form.password) { setError('Please fill in all fields.'); return; }
+  const handleLogin = async () => {
+    setGlobalError('');
+    const errors = runValidations({ mode: 'login', role: selectedRole, form });
+    if (Object.keys(errors).length) { setFieldErrors(errors); return; }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-
-      // ✅ Admin credentials work from ANY role tab — check first
-      if (
-        form.email === ADMIN_CREDENTIALS.email &&
-        form.password === ADMIN_CREDENTIALS.password
-      ) {
-        loginUser({ name: ADMIN_CREDENTIALS.name, email: form.email, role: 'admin' });
+    try {
+      // Admin special login — works from either tab
+      if (isAdminCredential(form.email, form.password)) {
+        loginUser({ name: ADMIN.name, email: ADMIN.email, role: 'admin' });
         return;
       }
 
-      // Regular customer / staff login
-      const accounts = DEMO_ACCOUNTS[selectedRole] || [];
-      const match = accounts.find(
-        (a) => a.email === form.email && a.password === form.password
-      );
+      // Firebase Auth login — password verified server-side against hashed copy
+      const user = await firebaseLogin(form.email, form.password);
 
-      // Also check localStorage-registered accounts
-      const registered = JSON.parse(localStorage.getItem(`stylesync_${selectedRole}_accounts`) || '[]');
-      const regMatch = registered.find(
-        (a) => a.email === form.email && a.password === form.password
-      );
-
-      const found = match || regMatch;
-      if (found) {
-        loginUser({ ...found, role: selectedRole });
-      } else {
-        setError('Invalid email or password. Please try again.');
+      // Role guard — make sure they're logging into the right tab
+      if (user.role !== selectedRole) {
+        setGlobalError(
+          `This account is registered as "${user.role}". Please select the "${user.role}" tab.`
+        );
+        return;
       }
-    }, 800);
+      loginUser(user);
+    } catch (err) {
+      setGlobalError(friendlyFirebaseError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Register ───────────────────────────────────────────────────────────────
-  const handleRegister = () => {
-    setError('');
-    if (!form.name || !form.email || !form.password || !form.confirmPassword)
-      { setError('Please fill in all required fields.'); return; }
-    if (selectedRole === 'staff' && !form.staffRole)
-      { setError('Please enter your staff role / specialisation.'); return; }
-    if (form.password.length < 6)
-      { setError('Password must be at least 6 characters.'); return; }
-    if (form.password !== form.confirmPassword)
-      { setError('Passwords do not match.'); return; }
-
-    const key = `stylesync_${selectedRole}_accounts`;
-    const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    if (existing.find((a) => a.email === form.email))
-      { setError('An account with this email already exists.'); return; }
+  const handleRegister = async () => {
+    setGlobalError('');
+    const errors = runValidations({ mode: 'register', role: selectedRole, form });
+    if (Object.keys(errors).length) { setFieldErrors(errors); return; }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const newUser = {
-        id: uid(),
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        password: form.password,
-        role: selectedRole,
-        ...(selectedRole === 'staff' && { staffRole: form.staffRole }),
-      };
-      localStorage.setItem(key, JSON.stringify([...existing, newUser]));
-      setSuccess('Account created successfully! You can now log in.');
+    try {
+      // Firebase creates account — password is hashed automatically (bcrypt / SHA-256)
+      await firebaseRegister({
+        name:      form.name,
+        email:     form.email,
+        password:  form.password,
+        phone:     form.phone,
+        role:      selectedRole,
+        staffRole: form.staffRole,
+      });
+      setSuccess('Account created successfully! You can now sign in.');
       setMode('login');
-      setForm({ name: '', email: '', phone: '', staffRole: '', password: '', confirmPassword: '' });
-    }, 900);
+      resetForm(true);
+    } catch (err) {
+      setGlobalError(friendlyFirebaseError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submit = mode === 'login' ? handleLogin : handleRegister;
 
   const roleConfig = {
     customer: {
-      icon: <User size={20} />,
+      icon:  <User size={20} />,
       label: 'Customer',
-      hint: mode === 'login'
-        ? 'Customer demo: sarah@email.com / sarah123  •  Admin: use your special ID here'
+      hint:  mode === 'login'
+        ? 'Sign in to book salon services  •  Admin: enter your special ID on any tab'
         : 'Create your personal Style Sync account',
-      color: 'from-pink-600 to-rose-700',
     },
     staff: {
-      icon: <Scissors size={20} />,
+      icon:  <Scissors size={20} />,
       label: 'Staff / Stylist',
-      hint: mode === 'login'
-        ? 'Staff demo: anna@stylesync.com / anna123  •  Admin: use your special ID here'
+      hint:  mode === 'login'
+        ? 'Sign in to access your schedule  •  Admin: enter your special ID on any tab'
         : 'Register as a certified StyleSync stylist',
-      color: 'from-violet-600 to-purple-700',
     },
   };
-
   const currentRole = roleConfig[selectedRole] || roleConfig.customer;
 
   return (
     <div className="min-h-screen w-full bg-black flex items-stretch overflow-hidden">
 
-      {/* ── Left Panel: Branding ─────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-14 overflow-hidden">
+      {/* ── Left Panel: Branding ──────────────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-14 overflow-hidden">
 
-        {/* Geometric accents */}
         <div className="geometric-accent w-96 h-96 rotate-45 -left-32 -top-16" />
         <div className="geometric-accent w-64 h-64 rotate-[20deg] -left-8 top-1/3" />
         <div className="geometric-accent w-48 h-48 rotate-12 left-24 top-1/2" />
 
-        {/* Model image */}
         <div className="absolute inset-0 z-0">
           <img
             src="/hero_model.png"
             alt="Style Sync fashion"
             className="w-full h-full object-cover object-top opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
         </div>
 
         {/* Logo */}
@@ -188,9 +265,7 @@ export const AuthPage = () => {
           <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
             Manage bookings, staff, payments, and home service requests — all from one elegant platform.
           </p>
-
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2">
             {['Smart Booking', 'Elderly Home Visits', 'AI Chatbot', 'Online Payments'].map(f => (
               <span key={f} className="flex items-center gap-1.5 px-3 py-1 border border-white/10 text-xs text-slate-300 rounded-full">
                 <CheckCircle size={12} className="text-primary" /> {f}
@@ -199,14 +274,15 @@ export const AuthPage = () => {
           </div>
         </div>
 
-        {/* Bottom quote */}
-        <p className="relative z-10 text-xs text-slate-600 tracking-widest uppercase">
-          © 2025 Style Sync — All Rights Reserved
-        </p>
+        {/* Security badge */}
+        <div className="relative z-10 flex items-center gap-2 text-xs text-slate-600">
+          <Lock size={12} />
+          <span>Passwords encrypted with Firebase bcrypt hashing — never stored in plain text</span>
+        </div>
       </div>
 
-      {/* ── Right Panel: Auth Form ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-10 relative overflow-y-auto">
+      {/* ── Right Panel: Auth Form ────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-14 py-10 overflow-y-auto">
 
         {/* Mobile logo */}
         <div className="flex lg:hidden items-center gap-2 mb-8">
@@ -218,7 +294,7 @@ export const AuthPage = () => {
         </div>
 
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-7">
           <h1 className="font-display text-4xl font-bold text-white mb-1">
             {mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h1>
@@ -229,23 +305,23 @@ export const AuthPage = () => {
           </p>
         </div>
 
-        {/* ── Role Selector ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        {/* ── Role Selector ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
           {['customer', 'staff'].map((role) => {
             const rc = roleConfig[role];
             const isActive = selectedRole === role;
             return (
               <button
                 key={role}
-                onClick={() => { setSelectedRole(role); setError(''); setSuccess(''); }}
+                onClick={() => { setSelectedRole(role); resetForm(); }}
                 className={`flex flex-col items-center gap-2 py-4 px-2 border transition-all duration-200 cursor-pointer rounded
                   ${isActive
                     ? 'border-primary bg-primary/10 text-primary shadow-[0_0_15px_rgba(225,29,72,0.3)]'
-                    : 'border-white/10 text-slate-400 hover:border-white/30 hover:text-white bg-white/3'
+                    : 'border-white/10 text-slate-400 hover:border-white/30 hover:text-white'
                   }`}
               >
                 {rc.icon}
-                <span className="text-xs font-semibold uppercase tracking-wider leading-none text-center">
+                <span className="text-xs font-semibold uppercase tracking-wider">
                   {rc.label}
                 </span>
               </button>
@@ -254,47 +330,62 @@ export const AuthPage = () => {
         </div>
 
         {/* Role hint */}
-        <p className="text-xs text-slate-500 mb-6 -mt-4 px-1 italic">
-          {currentRole.hint}
-        </p>
+        <p className="text-xs text-slate-500 mb-5 px-0.5 italic">{currentRole.hint}</p>
 
+        {/* ── Form Fields ───────────────────────────────────────────────── */}
+        <div className="space-y-3 w-full max-w-md">
 
-        {/* ── Form ───────────────────────────────────────────────────── */}
-        <div className="space-y-4 w-full max-w-md">
-
-          {/* Full Name (register only) */}
-          {mode === 'register' && selectedRole !== 'admin' && (
-            <div className="form-group mb-0">
+          {/* Full Name — register only */}
+          {mode === 'register' && (
+            <div>
               <label className="form-label">Full Name *</label>
               <input
                 type="text"
-                className="form-input"
+                className={`form-input mt-1 ${fieldErrors.name ? 'border-rose-500' : ''}`}
                 placeholder="e.g. Priya Sharma"
                 value={form.name}
-                onChange={set('name')}
+                onChange={setField('name')}
               />
+              <FieldError msg={fieldErrors.name} />
             </div>
           )}
 
-          {/* Phone (register + customer) */}
+          {/* Phone — register + customer */}
           {mode === 'register' && selectedRole === 'customer' && (
-            <div className="form-group mb-0">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="e.g. 9876543210"
-                value={form.phone}
-                onChange={set('phone')}
-              />
+            <div>
+              <label className="form-label">
+                Phone Number
+                <span className="text-slate-600 ml-1 font-normal">(10-digit Indian mobile)</span>
+              </label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">+91</span>
+                <input
+                  type="tel"
+                  className={`form-input pl-12 ${fieldErrors.phone ? 'border-rose-500' : ''}`}
+                  placeholder="9876543210"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={setField('phone')}
+                />
+              </div>
+              <FieldError msg={fieldErrors.phone} />
+              {form.phone && validatePhone(form.phone) && (
+                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle size={12} /> Valid Indian mobile number
+                </p>
+              )}
             </div>
           )}
 
-          {/* Staff Role (register + staff) */}
+          {/* Staff Role — register + staff */}
           {mode === 'register' && selectedRole === 'staff' && (
-            <div className="form-group mb-0">
+            <div>
               <label className="form-label">Specialisation / Role *</label>
-              <select className="form-select" value={form.staffRole} onChange={set('staffRole')}>
+              <select
+                className={`form-select mt-1 ${fieldErrors.staffRole ? 'border-rose-500' : ''}`}
+                value={form.staffRole}
+                onChange={setField('staffRole')}
+              >
                 <option value="">-- Select your role --</option>
                 <option>Senior Stylist</option>
                 <option>Colorist</option>
@@ -304,34 +395,47 @@ export const AuthPage = () => {
                 <option>Makeup Artist</option>
                 <option>Receptionist</option>
               </select>
+              <FieldError msg={fieldErrors.staffRole} />
             </div>
           )}
 
           {/* Email */}
-          <div className="form-group mb-0">
+          <div>
             <label className="form-label">Email Address *</label>
-            <input
-              type="email"
-              className="form-input"
-              placeholder={
-                selectedRole === 'admin' ? 'admin@stylesync.com' : 'you@example.com'
-              }
-              value={form.email}
-              onChange={set('email')}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
-            />
+            <div className="relative mt-1">
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="email"
+                className={`form-input pl-9 ${fieldErrors.email ? 'border-rose-500' : ''}`}
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={setField('email')}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+            </div>
+            <FieldError msg={fieldErrors.email} />
+            {form.email && !fieldErrors.email && validateEmail(form.email) && (
+              <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                <CheckCircle size={12} /> Valid email format
+              </p>
+            )}
           </div>
 
           {/* Password */}
-          <div className="form-group mb-0">
-            <label className="form-label">Password *</label>
-            <div className="relative">
+          <div>
+            <label className="form-label">
+              Password *
+              {mode === 'register' && (
+                <span className="text-slate-600 ml-1 font-normal">(min 8 chars, 1 uppercase, 1 number, 1 special)</span>
+              )}
+            </label>
+            <div className="relative mt-1">
               <input
                 type={showPw ? 'text' : 'password'}
-                className="form-input pr-12"
-                placeholder={mode === 'login' ? '••••••••' : 'Min. 6 characters'}
+                className={`form-input pr-12 ${fieldErrors.password ? 'border-rose-500' : ''}`}
+                placeholder={mode === 'register' ? 'e.g. MyPass@123' : '••••••••'}
                 value={form.password}
-                onChange={set('password')}
+                onChange={setField('password')}
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
               />
               <button
@@ -339,22 +443,25 @@ export const AuthPage = () => {
                 onClick={() => setShowPw(!showPw)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
-                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
+            <FieldError msg={fieldErrors.password} />
+            {/* Password strength meter shown only on register */}
+            {mode === 'register' && <StrengthMeter password={form.password} />}
           </div>
 
-          {/* Confirm Password (register only) */}
-          {mode === 'register' && selectedRole !== 'admin' && (
-            <div className="form-group mb-0">
+          {/* Confirm Password — register only */}
+          {mode === 'register' && (
+            <div>
               <label className="form-label">Confirm Password *</label>
-              <div className="relative">
+              <div className="relative mt-1">
                 <input
                   type={showConfirmPw ? 'text' : 'password'}
-                  className="form-input pr-12"
+                  className={`form-input pr-12 ${fieldErrors.confirmPassword ? 'border-rose-500' : ''}`}
                   placeholder="Re-enter password"
                   value={form.confirmPassword}
-                  onChange={set('confirmPassword')}
+                  onChange={setField('confirmPassword')}
                   onKeyDown={(e) => e.key === 'Enter' && submit()}
                 />
                 <button
@@ -362,54 +469,89 @@ export const AuthPage = () => {
                   onClick={() => setShowConfirmPw(!showConfirmPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
-                  {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPw ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+              <FieldError msg={fieldErrors.confirmPassword} />
+              {form.confirmPassword && form.password === form.confirmPassword && !fieldErrors.confirmPassword && (
+                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+                  <CheckCircle size={12} /> Passwords match
+                </p>
+              )}
             </div>
           )}
 
-          {/* Error / Success Messages */}
-          {error && (
+          {/* Password rules cheat-sheet — register */}
+          {mode === 'register' && (
+            <div className="p-3 border border-white/8 bg-white/2 rounded text-xs text-slate-500 space-y-1">
+              {[
+                { rule: 'At least 8 characters',           ok: form.password.length >= 8 },
+                { rule: 'One uppercase letter (A-Z)',       ok: /[A-Z]/.test(form.password) },
+                { rule: 'One number (0-9)',                 ok: /[0-9]/.test(form.password) },
+                { rule: 'One special character (@, #, !…)', ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password) },
+              ].map(({ rule, ok }) => (
+                <p key={rule} className={`flex items-center gap-1.5 ${ok ? 'text-green-400' : 'text-slate-500'}`}>
+                  {ok ? <CheckCircle size={11} /> : <span className="w-3 h-3 rounded-full border border-slate-600 inline-block" />}
+                  {rule}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Global error / success */}
+          {globalError && (
             <div className="p-3 border border-primary/50 bg-primary/10 rounded text-sm text-rose-300 flex items-start gap-2">
-              <span className="text-primary mt-0.5">⚠</span> {error}
+              <AlertCircle size={15} className="text-primary mt-0.5 shrink-0" /> {globalError}
             </div>
           )}
           {success && (
-            <div className="p-3 border border-green-500/40 bg-green-500/10 rounded text-sm text-green-300 flex items-start gap-2">
-              <CheckCircle size={16} className="text-green-400 mt-0.5 shrink-0" /> {success}
+            <div className="p-3 border border-green-500/40 bg-green-500/10 rounded text-sm text-green-300 flex items-center gap-2">
+              <CheckCircle size={15} className="text-green-400 shrink-0" /> {success}
             </div>
           )}
 
-          {/* Submit Button */}
+          {/* Submit */}
           <button
             onClick={submit}
             disabled={loading}
-            className="btn-red-neon w-full justify-between mt-2"
+            className="btn-red-neon w-full justify-between mt-1"
           >
             <span>
               {loading
-                ? 'Please wait…'
+                ? (mode === 'login' ? 'Signing in…' : 'Creating account…')
                 : mode === 'login'
                   ? `Sign In as ${currentRole.label}`
-                  : `Create Account`}
+                  : 'Create Account'}
             </span>
             {!loading && <ArrowRight size={18} />}
           </button>
 
-          {/* Admin Tip */}
-          <div className="mt-1 p-3 border border-white/5 bg-white/2 rounded text-xs text-slate-500 flex items-center gap-2">
-            <ShieldCheck size={14} className="text-slate-600" />
-            <span>Admins: Use your credentials in the staff portal.</span>
+          {/* Admin tip */}
+          {mode === 'login' && (
+            <div className="p-3 border border-white/5 bg-white/2 rounded text-xs text-slate-600 flex items-center gap-2">
+              <ShieldCheck size={13} className="text-slate-600 shrink-0" />
+              <span>
+                <span className="text-slate-400 font-semibold">Admin?</span>{' '}
+                Use your special credentials on either tab — you&apos;ll be routed to the Admin Dashboard automatically.
+              </span>
+            </div>
+          )}
+
+          {/* Firestore DB notice */}
+          <div className="flex items-center gap-2 text-xs text-slate-700 pt-1">
+            <Lock size={11} />
+            <span>Data stored securely in Firebase Firestore. Passwords encrypted server-side.</span>
           </div>
+
         </div>
 
-        {/* ── Toggle mode ───────────────────────────────────────────── */}
-        <div className="mt-8 text-sm text-slate-500">
+        {/* ── Toggle Login / Register ───────────────────────────────────── */}
+        <div className="mt-7 text-sm text-slate-500">
           {mode === 'login' ? (
             <>
               Don&apos;t have an account?{' '}
               <button
-                onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
+                onClick={() => { setMode('register'); resetForm(); }}
                 className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer"
               >
                 Register here
@@ -419,7 +561,7 @@ export const AuthPage = () => {
             <>
               Already have an account?{' '}
               <button
-                onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                onClick={() => { setMode('login'); resetForm(); }}
                 className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer"
               >
                 Sign in
