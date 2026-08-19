@@ -155,107 +155,134 @@ export const INITIAL_SERVICES = [
 export const INITIAL_STAFF = [
   {
     id: 'stf-1',
-    name: 'Alexander Wright',
-    role: 'Senior Master Stylist',
-    specialty: 'Hair & Beard Sculpting',
-    rating: 4.9,
+    name: 'Akash K Biju',
+    role: 'Senior Master Stylist & Director',
+    specialty: 'Hair & Beard Design, Senior Care Specialist',
+    rating: 5.0,
     experience: '8 Years',
     status: 'Available',
     homeServiceCertified: true,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    email: 'akash@stylesync.com',
+    phone: '+91 98471 20061'
   },
   {
     id: 'stf-2',
-    name: 'Sophia Chen',
-    role: 'Elderly Care & Skincare Specialist',
-    specialty: 'Geriatric Care & Reflexology',
+    name: 'Ananya Nair',
+    role: 'Senior Ayur-Therapist & Elderly Care Specialist',
+    specialty: 'Geriatric Care, Bedside Scalp Therapy & Reflexology',
     rating: 4.98,
     experience: '7 Years',
     status: 'Available',
     homeServiceCertified: true,
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80'
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+    email: 'ananya@stylesync.com',
+    phone: '+91 98472 30072'
   },
   {
     id: 'stf-3',
-    name: 'Marcus Vance',
-    role: 'Reflexologist & Nail Specialist',
-    specialty: 'Foot Reflexology & Pain Therapy',
-    rating: 4.85,
-    experience: '5 Years',
+    name: 'Rahul Krishna',
+    role: 'Precision Grooming & Shaving Specialist',
+    specialty: 'Classic Hot Towel Shave, Hair Styling & Scalp Spa',
+    rating: 4.90,
+    experience: '6 Years',
     status: 'Available',
     homeServiceCertified: true,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    email: 'rahul@stylesync.com',
+    phone: '+91 98473 40083'
   },
   {
     id: 'stf-4',
-    name: 'Elena Rostova',
-    role: 'Senior Ayur-Therapist',
-    specialty: 'Ayurvedic Scalp & Bedside Care',
-    rating: 4.92,
-    experience: '9 Years',
+    name: 'Meera Varma',
+    role: 'Senior Skincare & Reflexology Specialist',
+    specialty: '24K Gold Facials, Arthritis Hand Therapy & Nails',
+    rating: 4.95,
+    experience: '5 Years',
     status: 'Available',
     homeServiceCertified: true,
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+    email: 'meera@stylesync.com',
+    phone: '+91 98474 50094'
   }
 ];
 
 export const INITIAL_BOOKINGS = [
   {
     id: 'BK-9021',
-    customerName: 'Robert Vance (Elderly Care)',
-    customerPhone: '+91 98765 43210',
+    customerName: 'K. R. Menon (Senior Care)',
+    customerPhone: '+91 98470 11223',
     serviceTitle: 'Elderly Gentle Grooming & Hair Care',
     serviceId: 'srv-4',
-    stylistName: 'Sophia Chen',
+    stylistName: 'Akash K Biju',
     type: 'home-service',
-    date: '2026-07-23',
-    time: '11:00 AM',
-    address: 'Flat 402, Sunshine Heights, M.G. Road, Bengaluru',
-    landmark: 'Near Apollo Hospital',
-    specialNotes: 'Customer is 76 years old and uses a wheelchair. Requires gentle scalp trim and quiet session.',
+    date: '2026-08-20',
+    time: '10:00 AM',
+    address: 'Villa 14, Palm Grove Residency, Collectorate P.O., Kottayam',
+    landmark: 'Near District Hospital',
+    specialNotes: '[Special Needs: Wheelchair / Limited Mobility, Gentle Scalp Care] | Patient is 78 years old, requires gentle haircut and soothing scalp combing.',
     amount: 550,
     status: 'Pending',
-    paymentStatus: 'Paid (Razorpay)',
+    paymentStatus: 'Paid (Razorpay UPI)',
     paymentId: 'pay_RZP98234721',
-    createdAt: '2026-07-22 14:30'
+    createdAt: '2026-08-16 10:30'
   },
   {
     id: 'BK-9022',
-    customerName: 'Priya Sharma',
-    customerPhone: '+91 91234 56789',
+    customerName: 'Lakshmi Pillai',
+    customerPhone: '+91 94471 55667',
     serviceTitle: '24K Gold Glow Facial & Hydration',
     serviceId: 'srv-2',
-    stylistName: 'Sophia Chen',
+    stylistName: 'Meera Varma',
     type: 'in-shop',
-    date: '2026-07-23',
+    date: '2026-08-20',
     time: '02:00 PM',
-    address: 'N/A (In-Shop)',
+    address: 'N/A (In-Shop Salon Visit)',
     landmark: '',
-    specialNotes: 'Allergic to heavy fragrances.',
+    specialNotes: 'Sensitive skin, please use herbal organic hydration pack.',
     amount: 2200,
     status: 'In-Progress',
-    paymentStatus: 'Paid (Razorpay)',
+    paymentStatus: 'Paid (Razorpay Card)',
     paymentId: 'pay_RZP88129034',
-    createdAt: '2026-07-22 16:15'
+    createdAt: '2026-08-16 11:15'
   },
   {
     id: 'BK-9020',
-    customerName: 'Arjun Mehta',
-    customerPhone: '+91 99887 76655',
+    customerName: 'Dr. George Thomas',
+    customerPhone: '+91 94472 88990',
     serviceTitle: 'Signature Royal Haircut & Styling',
     serviceId: 'srv-1',
-    stylistName: 'Alexander Wright',
+    stylistName: 'Rahul Krishna',
     type: 'in-shop',
-    date: '2026-07-23',
+    date: '2026-08-20',
     time: '09:30 AM',
-    address: 'N/A (In-Shop)',
+    address: 'N/A (In-Shop Salon Visit)',
     landmark: '',
-    specialNotes: 'Prefers low fade sideburns.',
+    specialNotes: 'Executive classic styling with hot towel neck trim.',
     amount: 850,
     status: 'Completed',
-    paymentStatus: 'Paid (Razorpay)',
+    paymentStatus: 'Paid (Razorpay NetBanking)',
     paymentId: 'pay_RZP77263412',
-    createdAt: '2026-07-21 11:00'
+    createdAt: '2026-08-15 16:00'
+  },
+  {
+    id: 'BK-9023',
+    customerName: 'Saraswathi Amma (Senior Care)',
+    customerPhone: '+91 98473 66778',
+    serviceTitle: 'Senior Geriatric Pedicure & Foot Reflexology',
+    serviceId: 'srv-7',
+    stylistName: 'Ananya Nair',
+    type: 'home-service',
+    date: '2026-08-21',
+    time: '11:00 AM',
+    address: 'House No. 42, Kailas Nagar, Kanjikuzhy, Kottayam',
+    landmark: 'Opposite Mount Carmel School',
+    specialNotes: '[Special Needs: Bedside Assisted Grooming, Diabetic-Safe] | Warm herbal soak and acupressure massage for foot arthritis comfort.',
+    amount: 799,
+    status: 'Pending',
+    paymentStatus: 'Paid (Razorpay UPI)',
+    paymentId: 'pay_RZP66382910',
+    createdAt: '2026-08-16 14:00'
   }
 ];
 
@@ -263,61 +290,72 @@ export const INITIAL_PAYMENTS = [
   {
     id: 'pay_RZP98234721',
     bookingId: 'BK-9021',
-    customerName: 'Robert Vance (Elderly Care)',
+    customerName: 'K. R. Menon (Senior Care)',
     serviceTitle: 'Elderly Gentle Grooming & Hair Care',
     amount: 550,
-    method: 'Razorpay UPI',
+    method: 'Razorpay UPI (Google Pay)',
     status: 'Success',
-    date: '2026-07-22',
-    time: '14:32'
+    date: '2026-08-16',
+    time: '10:32'
   },
   {
     id: 'pay_RZP88129034',
     bookingId: 'BK-9022',
-    customerName: 'Priya Sharma',
+    customerName: 'Lakshmi Pillai',
     serviceTitle: '24K Gold Glow Facial & Hydration',
     amount: 2200,
     method: 'Razorpay Card (Visa)',
     status: 'Success',
-    date: '2026-07-22',
-    time: '16:17'
+    date: '2026-08-16',
+    time: '11:17'
   },
   {
     id: 'pay_RZP77263412',
     bookingId: 'BK-9020',
-    customerName: 'Arjun Mehta',
+    customerName: 'Dr. George Thomas',
     serviceTitle: 'Signature Royal Haircut & Styling',
     amount: 850,
-    method: 'Razorpay NetBanking (HDFC)',
+    method: 'Razorpay NetBanking (SBI)',
     status: 'Success',
-    date: '2026-07-21',
-    time: '11:05'
+    date: '2026-08-15',
+    time: '16:05'
+  },
+  {
+    id: 'pay_RZP66382910',
+    bookingId: 'BK-9023',
+    customerName: 'Saraswathi Amma (Senior Care)',
+    serviceTitle: 'Senior Geriatric Pedicure & Foot Reflexology',
+    amount: 799,
+    method: 'Razorpay UPI (PhonePe)',
+    status: 'Success',
+    date: '2026-08-16',
+    time: '14:05'
   }
 ];
 
 export const INITIAL_FEEDBACK = [
   {
     id: 'fb-1',
-    customerName: 'Ananya Deshmukh (for Father)',
+    customerName: 'Adv. Suresh Kumar (for Father)',
     rating: 5,
-    comment: 'Sophia Chen was exceptionally patient and kind with my 82-year-old father. She brought all sanitized equipment, washed his hair at bedside without any mess. Truly a lifesaver service!',
-    date: '2026-07-22',
-    service: 'Bedside Hair Wash & Gentle Blow-Dry'
+    comment: 'Akash K Biju was exceptionally patient, respectful, and gentle with my 84-year-old father. He brought sanitized tools and finished the bedside haircut without any rush. Outstanding service!',
+    date: '2026-08-16',
+    service: 'Elderly Gentle Grooming & Hair Care'
   },
   {
     id: 'fb-2',
-    customerName: 'Rahul Verma',
+    customerName: 'Dr. Radhika Varma',
     rating: 5,
-    comment: 'The home barber service was punctual and extremely clean. Alexander had sanitized scissors and disposable sheets. 10/10 experience.',
-    date: '2026-07-21',
-    service: 'Classic Senior Shave & Hot Towel Grooming'
+    comment: 'Ananya Nair provided a soothing therapeutic foot reflexology session for my mother who suffers from severe arthritis. Her pain reduced remarkably.',
+    date: '2026-08-15',
+    service: 'Senior Geriatric Pedicure & Foot Reflexology'
   },
   {
     id: 'fb-3',
-    customerName: 'Kavita Rao',
+    customerName: 'Arjun Nambiar',
     rating: 5,
-    comment: 'My mother has severe arthritis and Marcus did a very gentle hand and foot reflexology session. Her swelling and stiffness reduced noticeably.',
-    date: '2026-07-20',
-    service: 'Senior Geriatric Pedicure & Foot Reflexology'
+    comment: 'Rahul Krishna gave me the best fade haircut and hot towel shave in town. Fast, hygienic, and extremely professional.',
+    date: '2026-08-14',
+    service: 'Signature Royal Haircut & Styling'
   }
 ];
