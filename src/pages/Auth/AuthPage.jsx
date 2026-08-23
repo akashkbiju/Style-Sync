@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useSalon } from '../../context/SalonContext';
 import {
-  Eye, EyeOff, Scissors, User, Users, ShieldCheck,
-  ArrowRight, CheckCircle, Lock, Phone, Mail, AlertCircle
+  Eye, EyeOff, Scissors, User,
+  ArrowRight, CheckCircle, Lock, AlertCircle
 } from 'lucide-react';
 import {
   firebaseRegister,
@@ -13,7 +13,7 @@ import {
   passwordStrength,
 } from '../../firebase/authService';
 
-// ─── Admin Credentials (never stored in DB, hardcoded in source) ───────────────
+// ─── Admin Master Credentials ───────────────────────────────────────────────
 const ADMIN = {
   email:    'admin@stylesync.com',
   password: 'Admin@2025',
@@ -25,8 +25,8 @@ const runValidations = ({ mode, role, form }) => {
   const errors = {};
 
   // ── Email ──────────────────────────────────────────────────────────────
-  if (!form.email) {
-    errors.email = 'Email is required.';
+  if (!form.email.trim()) {
+    errors.email = 'Email address is required.';
   } else if (!validateEmail(form.email)) {
     errors.email = 'Enter a valid email address (e.g. name@domain.com).';
   }
@@ -50,7 +50,7 @@ const runValidations = ({ mode, role, form }) => {
       errors.confirmPassword = 'Passwords do not match.';
     }
 
-    // ── Phone (customer only) ────────────────────────────────────────────
+    // ── Phone (customer only) ────────────────────────────────────
     if (role === 'customer' && form.phone) {
       if (!validatePhone(form.phone)) {
         errors.phone = 'Enter a valid 10-digit Indian mobile number (starts with 6-9).';
@@ -59,7 +59,7 @@ const runValidations = ({ mode, role, form }) => {
 
     // ── Staff Role ───────────────────────────────────────────────────────
     if (role === 'staff' && !form.staffRole) {
-      errors.staffRole = 'Please select your specialisation.';
+      errors.staffRole = 'Please select your specialization.';
     }
   }
 
@@ -71,16 +71,17 @@ const StrengthMeter = ({ password }) => {
   if (!password) return null;
   const s = passwordStrength(password);
   return (
-    <div className="mt-1.5 space-y-1">
-      <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+    <div className="mt-2 space-y-1">
+      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: s.width, backgroundColor: s.color }}
         />
       </div>
-      <p className="text-xs" style={{ color: s.color }}>
-        Strength: <span className="font-semibold">{s.label}</span>
-      </p>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-slate-400">Security Strength:</span>
+        <span className="font-semibold" style={{ color: s.color }}>{s.label}</span>
+      </div>
     </div>
   );
 };
@@ -88,8 +89,8 @@ const StrengthMeter = ({ password }) => {
 // ─── Field Error Component ─────────────────────────────────────────────────────
 const FieldError = ({ msg }) =>
   msg ? (
-    <p className="flex items-center gap-1 text-xs text-rose-400 mt-1">
-      <AlertCircle size={12} /> {msg}
+    <p className="flex items-center gap-1.5 text-xs text-rose-400 mt-1.5 font-medium">
+      <AlertCircle size={13} className="shrink-0" /> {msg}
     </p>
   ) : null;
 
@@ -133,11 +134,11 @@ export const AuthPage = () => {
       case 'auth/weak-password':           return 'Password is too weak. Use at least 8 characters.';
       case 'auth/user-not-found':          return 'No account found with this email.';
       case 'auth/wrong-password':          return 'Incorrect password. Please try again.';
-      case 'auth/invalid-credential':      return 'Invalid email or password. Please try again.';
+      case 'auth/invalid-credential':      return 'Invalid email or password. Please verify your credentials.';
       case 'auth/too-many-requests':       return 'Too many failed attempts. Please try again later.';
       case 'auth/network-request-failed':  return 'Network error. Please check your internet connection.';
-      case 'auth/operation-not-allowed':   return 'Email/Password sign-in is disabled. Please enable it in Firebase Console -> Authentication -> Sign-in method.';
-      default:                             return msg || 'Something went wrong. Please try again.';
+      case 'auth/operation-not-allowed':   return 'Email/Password sign-in is disabled in Firebase Console.';
+      default:                             return msg || 'Authentication failed. Please check your details.';
     }
   };
 
@@ -153,19 +154,19 @@ export const AuthPage = () => {
 
     setLoading(true);
     try {
-      // Admin special login — works from either tab
+      // 1. Admin master login
       if (isAdminCredential(form.email, form.password)) {
         loginUser({ name: ADMIN.name, email: ADMIN.email, role: 'admin' });
         return;
       }
 
-      // Firebase Auth login — password verified server-side against hashed copy
+      // 2. Firebase Auth login
       const user = await firebaseLogin(form.email, form.password);
 
-      // Role guard — make sure they're logging into the right tab
+      // 3. Role verification
       if (user.role !== selectedRole) {
         setGlobalError(
-          `This account is registered as "${user.role}". Please select the "${user.role}" tab.`
+          `This account is registered as "${user.role.toUpperCase()}". Please switch to the "${user.role}" tab.`
         );
         return;
       }
@@ -185,7 +186,6 @@ export const AuthPage = () => {
 
     setLoading(true);
     try {
-      // Firebase creates account — password is hashed automatically (bcrypt / SHA-256)
       await firebaseRegister({
         name:      form.name,
         email:     form.email,
@@ -194,7 +194,7 @@ export const AuthPage = () => {
         role:      selectedRole,
         staffRole: form.staffRole,
       });
-      setSuccess('Account created successfully! You can now sign in.');
+      setSuccess('Account created successfully! Please sign in with your credentials.');
       setMode('login');
       resetForm(true);
     } catch (err) {
@@ -211,15 +211,15 @@ export const AuthPage = () => {
       icon:  <User size={20} />,
       label: 'Customer',
       hint:  mode === 'login'
-        ? 'Sign in to book salon services  •  Admin: enter your special ID on any tab'
-        : 'Create your personal Style Sync account',
+        ? 'Sign in to book in-shop & home salon appointments'
+        : 'Create your personal StyleSync customer account',
     },
     staff: {
       icon:  <Scissors size={20} />,
       label: 'Staff / Stylist',
       hint:  mode === 'login'
-        ? 'Sign in to access your schedule  •  Admin: enter your special ID on any tab'
-        : 'Register as a certified StyleSync stylist',
+        ? 'Sign in to manage your appointments & schedule'
+        : 'Register as a certified StyleSync salon specialist',
     },
   };
   const currentRole = roleConfig[selectedRole] || roleConfig.customer;
@@ -227,8 +227,8 @@ export const AuthPage = () => {
   return (
     <div className="min-h-screen w-full bg-black flex items-stretch overflow-hidden">
 
-      {/* ── Left Panel: Branding ──────────────────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-14 overflow-hidden">
+      {/* ── Left Panel: Luxury High-Fashion Branding ──────────────────────── */}
+      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-14 overflow-hidden border-r border-white/10">
 
         <div className="geometric-accent w-96 h-96 rotate-45 -left-32 -top-16" />
         <div className="geometric-accent w-64 h-64 rotate-[20deg] -left-8 top-1/3" />
@@ -237,203 +237,210 @@ export const AuthPage = () => {
         <div className="absolute inset-0 z-0">
           <img
             src="/hero_model.png"
-            alt="Style Sync fashion"
-            className="w-full h-full object-cover object-top opacity-40"
+            alt="Style Sync luxury fashion"
+            className="w-full h-full object-cover object-top opacity-35"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
         </div>
 
-        {/* Logo */}
+        {/* Brand Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <Scissors size={28} className="text-primary" />
-            <span className="font-display text-3xl font-bold">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/20 border border-primary flex items-center justify-center shadow-[0_0_15px_rgba(225,29,72,0.4)]">
+              <Scissors size={22} className="text-primary" />
+            </div>
+            <span className="font-display text-3xl font-bold tracking-tight">
               <span className="text-primary">Style</span>{' '}
               <span className="text-white">Sync</span>
             </span>
           </div>
-          <p className="text-slate-400 text-sm tracking-widest uppercase">Salon Management System</p>
+          <p className="text-slate-400 text-xs tracking-widest uppercase font-medium pl-0.5">
+            Luxury Salon Management & Care System
+          </p>
         </div>
 
-        {/* Tagline */}
+        {/* Tagline & Feature Highlights */}
         <div className="relative z-10 space-y-6">
-          <h2 className="font-display text-5xl font-bold text-white leading-tight uppercase">
+          <h2 className="font-display text-5xl font-bold text-white leading-[1.15] uppercase tracking-tight">
             Luxury<br />
-            <span className="text-primary">Reimagined</span><br />
-            For Every<br />Salon.
+            <span className="text-primary text-glow">Reimagined</span><br />
+            For Modern<br />Salons.
           </h2>
-          <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-            Manage bookings, staff, payments, and home service requests — all from one elegant platform.
+          <p className="text-slate-300 text-sm max-w-sm leading-relaxed">
+            Automate in-shop bookings, staff rosters, digital billing, and specialized elderly home visits.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {['Smart Booking', 'Elderly Home Visits', 'AI Chatbot', 'Online Payments'].map(f => (
-              <span key={f} className="flex items-center gap-1.5 px-3 py-1 border border-white/10 text-xs text-slate-300 rounded-full">
-                <CheckCircle size={12} className="text-primary" /> {f}
+          <div className="flex flex-wrap gap-2 pt-2">
+            {['In-Shop Booking', 'Elderly At-Home Care', 'AI Salon Bot', 'Digital Billing'].map((f) => (
+              <span key={f} className="flex items-center gap-1.5 px-3.5 py-1.5 border border-white/15 bg-white/5 backdrop-blur-md text-xs text-slate-200 rounded-full font-medium shadow-sm">
+                <CheckCircle size={13} className="text-primary" /> {f}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Security badge */}
-        <div className="relative z-10 flex items-center gap-2 text-xs text-slate-600">
-          <Lock size={12} />
-          <span>Passwords encrypted with Firebase bcrypt hashing — never stored in plain text</span>
+        {/* Security & Database Status */}
+        <div className="relative z-10 flex items-center gap-2.5 text-xs text-slate-400 border-t border-white/10 pt-4">
+          <Lock size={14} className="text-primary shrink-0" />
+          <span>Cloud Database connected with secure server-side password encryption.</span>
         </div>
       </div>
 
-      {/* ── Right Panel: Auth Form ────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-14 py-10 overflow-y-auto">
+      {/* ── Right Panel: Auth Form Container ──────────────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-10 overflow-y-auto bg-gradient-to-b from-black via-zinc-950 to-black">
 
-        {/* Mobile logo */}
-        <div className="flex lg:hidden items-center gap-2 mb-8">
-          <Scissors size={24} className="text-primary" />
+        {/* Mobile Header Logo */}
+        <div className="flex lg:hidden items-center gap-2.5 mb-6">
+          <div className="w-8 h-8 rounded bg-primary/20 border border-primary flex items-center justify-center">
+            <Scissors size={18} className="text-primary" />
+          </div>
           <span className="font-display text-2xl font-bold">
             <span className="text-primary">Style</span>{' '}
             <span className="text-white">Sync</span>
           </span>
         </div>
 
-        {/* Header */}
-        <div className="mb-7">
-          <h1 className="font-display text-4xl font-bold text-white mb-1">
+        {/* Heading & Subtitle */}
+        <div className="mb-6 max-w-md w-full">
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mb-1.5 tracking-tight">
             {mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-slate-400 text-sm">
             {mode === 'login'
-              ? 'Sign in to continue to your dashboard'
-              : 'Join the Style Sync platform today'}
+              ? 'Sign in to access your customized dashboard'
+              : 'Register to start booking and managing appointments'}
           </p>
         </div>
 
-        {/* ── Role Selector ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          {['customer', 'staff'].map((role) => {
-            const rc = roleConfig[role];
-            const isActive = selectedRole === role;
-            return (
-              <button
-                key={role}
-                onClick={() => { setSelectedRole(role); resetForm(); }}
-                className={`flex flex-col items-center gap-2 py-4 px-2 border transition-all duration-200 cursor-pointer rounded
-                  ${isActive
-                    ? 'border-primary bg-primary/10 text-primary shadow-[0_0_15px_rgba(225,29,72,0.3)]'
-                    : 'border-white/10 text-slate-400 hover:border-white/30 hover:text-white'
-                  }`}
-              >
-                {rc.icon}
-                <span className="text-xs font-semibold uppercase tracking-wider">
-                  {rc.label}
-                </span>
-              </button>
-            );
-          })}
+        {/* ── Role Selector Tabs ────────────────────────────────────────── */}
+        <div className="max-w-md w-full mb-5">
+          <div className="grid grid-cols-2 gap-3">
+            {['customer', 'staff'].map((role) => {
+              const rc = roleConfig[role];
+              const isActive = selectedRole === role;
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => { setSelectedRole(role); resetForm(); }}
+                  className={`flex flex-col items-center gap-2 py-3.5 px-3 border rounded transition-all duration-200 cursor-pointer text-center
+                    ${isActive
+                      ? 'border-primary bg-primary/10 text-primary shadow-[0_0_18px_rgba(225,29,72,0.25)] font-bold'
+                      : 'border-white/10 bg-white/2 text-slate-400 hover:border-white/25 hover:text-slate-200'
+                    }`}
+                >
+                  <div className={isActive ? 'text-primary' : 'text-slate-400'}>{rc.icon}</div>
+                  <span className="text-xs uppercase tracking-wider font-semibold">
+                    {rc.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-400 mt-2 px-1 italic">{currentRole.hint}</p>
         </div>
 
-        {/* Role hint */}
-        <p className="text-xs text-slate-500 mb-5 px-0.5 italic">{currentRole.hint}</p>
+        {/* ── Form Fields Container ──────────────────────────────────────── */}
+        <div className="space-y-4 w-full max-w-md">
 
-        {/* ── Form Fields ───────────────────────────────────────────────── */}
-        <div className="space-y-3 w-full max-w-md">
-
-          {/* Full Name — register only */}
+          {/* Full Name — Register Only */}
           {mode === 'register' && (
             <div>
-              <label className="form-label">Full Name *</label>
+              <label className="form-label">
+                Full Name <span className="text-primary">*</span>
+              </label>
               <input
                 type="text"
-                className={`form-input mt-1 ${fieldErrors.name ? 'border-rose-500' : ''}`}
-                placeholder="e.g. Priya Sharma"
+                className={`form-input mt-1 ${fieldErrors.name ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                placeholder="Enter your full name"
                 value={form.name}
                 onChange={setField('name')}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
               />
               <FieldError msg={fieldErrors.name} />
             </div>
           )}
 
-          {/* Phone — register + customer */}
-          {mode === 'register' && selectedRole === 'customer' && (
-            <div>
-              <label className="form-label">
-                Phone Number
-                <span className="text-slate-600 ml-1 font-normal">(10-digit Indian mobile)</span>
-              </label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">+91</span>
-                <input
-                  type="tel"
-                  className={`form-input pl-12 ${fieldErrors.phone ? 'border-rose-500' : ''}`}
-                  placeholder="9876543210"
-                  maxLength={10}
-                  value={form.phone}
-                  onChange={setField('phone')}
-                />
-              </div>
-              <FieldError msg={fieldErrors.phone} />
-              {form.phone && validatePhone(form.phone) && (
-                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                  <CheckCircle size={12} /> Valid Indian mobile number
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Staff Role — register + staff */}
-          {mode === 'register' && selectedRole === 'staff' && (
-            <div>
-              <label className="form-label">Specialisation / Role *</label>
-              <select
-                className={`form-select mt-1 ${fieldErrors.staffRole ? 'border-rose-500' : ''}`}
-                value={form.staffRole}
-                onChange={setField('staffRole')}
-              >
-                <option value="">-- Select your role --</option>
-                <option>Senior Stylist</option>
-                <option>Colorist</option>
-                <option>Hair Therapist</option>
-                <option>Nail Artist</option>
-                <option>Spa Therapist</option>
-                <option>Makeup Artist</option>
-                <option>Receptionist</option>
-              </select>
-              <FieldError msg={fieldErrors.staffRole} />
-            </div>
-          )}
-
-          {/* Email */}
+          {/* Email Address */}
           <div>
-            <label className="form-label">Email Address *</label>
-            <div className="relative mt-1">
-              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="email"
-                className={`form-input pl-9 ${fieldErrors.email ? 'border-rose-500' : ''}`}
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={setField('email')}
-                onKeyDown={(e) => e.key === 'Enter' && submit()}
-              />
-            </div>
+            <label className="form-label">
+              Email Address <span className="text-primary">*</span>
+            </label>
+            <input
+              type="email"
+              className={`form-input mt-1 ${fieldErrors.email ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+              placeholder="Enter your email address"
+              value={form.email}
+              onChange={setField('email')}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+            />
             <FieldError msg={fieldErrors.email} />
             {form.email && !fieldErrors.email && validateEmail(form.email) && (
-              <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+              <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1">
                 <CheckCircle size={12} /> Valid email format
               </p>
             )}
           </div>
 
-          {/* Password */}
+          {/* Phone Number — Customer Register */}
+          {mode === 'register' && selectedRole === 'customer' && (
+            <div>
+              <label className="form-label">
+                Mobile Number <span className="text-slate-400 font-normal">(10-digit Indian Mobile)</span>
+              </label>
+              <input
+                type="tel"
+                className={`form-input mt-1 ${fieldErrors.phone ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                placeholder="Enter 10-digit mobile number"
+                maxLength={10}
+                value={form.phone}
+                onChange={setField('phone')}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+              <FieldError msg={fieldErrors.phone} />
+              {form.phone && validatePhone(form.phone) && (
+                <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1">
+                  <CheckCircle size={12} /> Valid 10-digit mobile number
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Staff Specialization — Staff Register */}
+          {mode === 'register' && selectedRole === 'staff' && (
+            <div>
+              <label className="form-label">
+                Specialization / Role <span className="text-primary">*</span>
+              </label>
+              <select
+                className={`form-select mt-1 ${fieldErrors.staffRole ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                value={form.staffRole}
+                onChange={setField('staffRole')}
+              >
+                <option value="">-- Select your specialization --</option>
+                <option value="Senior Master Stylist">Senior Master Stylist & Hair Care</option>
+                <option value="Senior Ayur-Therapist & Elderly Care Specialist">Senior Ayur-Therapist & Elderly Care</option>
+                <option value="Precision Grooming Specialist">Precision Grooming & Shaving</option>
+                <option value="Senior Skincare & Reflexology Specialist">Senior Skincare & Facial Therapy</option>
+                <option value="Colorist & Hair Artist">Colorist & Hair Artist</option>
+                <option value="Nail & Pedicure Spa Specialist">Nail & Pedicure Spa Specialist</option>
+              </select>
+              <FieldError msg={fieldErrors.staffRole} />
+            </div>
+          )}
+
+          {/* Password Field */}
           <div>
             <label className="form-label">
-              Password *
+              Password <span className="text-primary">*</span>
               {mode === 'register' && (
-                <span className="text-slate-600 ml-1 font-normal">(min 8 chars, 1 uppercase, 1 number, 1 special)</span>
+                <span className="text-slate-400 font-normal text-xs ml-1">(min 8 chars, uppercase, number & symbol)</span>
               )}
             </label>
             <div className="relative mt-1">
               <input
                 type={showPw ? 'text' : 'password'}
-                className={`form-input pr-12 ${fieldErrors.password ? 'border-rose-500' : ''}`}
-                placeholder={mode === 'register' ? 'e.g. MyPass@123' : '••••••••'}
+                className={`form-input pr-11 ${fieldErrors.password ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                placeholder="Enter your password"
                 value={form.password}
                 onChange={setField('password')}
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -441,25 +448,27 @@ export const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
+                aria-label={showPw ? 'Hide password' : 'Show password'}
               >
-                {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             <FieldError msg={fieldErrors.password} />
-            {/* Password strength meter shown only on register */}
             {mode === 'register' && <StrengthMeter password={form.password} />}
           </div>
 
-          {/* Confirm Password — register only */}
+          {/* Confirm Password — Register Only */}
           {mode === 'register' && (
             <div>
-              <label className="form-label">Confirm Password *</label>
+              <label className="form-label">
+                Confirm Password <span className="text-primary">*</span>
+              </label>
               <div className="relative mt-1">
                 <input
                   type={showConfirmPw ? 'text' : 'password'}
-                  className={`form-input pr-12 ${fieldErrors.confirmPassword ? 'border-rose-500' : ''}`}
-                  placeholder="Re-enter password"
+                  className={`form-input pr-11 ${fieldErrors.confirmPassword ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                  placeholder="Confirm your password"
                   value={form.confirmPassword}
                   onChange={setField('confirmPassword')}
                   onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -467,92 +476,80 @@ export const AuthPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPw(!showConfirmPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
+                  aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
                 >
-                  {showConfirmPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               <FieldError msg={fieldErrors.confirmPassword} />
               {form.confirmPassword && form.password === form.confirmPassword && !fieldErrors.confirmPassword && (
-                <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-                  <CheckCircle size={12} /> Passwords match
+                <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1">
+                  <CheckCircle size={12} /> Passwords match perfectly
                 </p>
               )}
             </div>
           )}
 
-          {/* Password rules cheat-sheet — register */}
+          {/* Password Requirements Checklist — Register Only */}
           {mode === 'register' && (
-            <div className="p-3 border border-white/8 bg-white/2 rounded text-xs text-slate-500 space-y-1">
+            <div className="p-3 border border-white/10 bg-white/2 rounded text-xs text-slate-400 space-y-1 mt-2">
               {[
-                { rule: 'At least 8 characters',           ok: form.password.length >= 8 },
-                { rule: 'One uppercase letter (A-Z)',       ok: /[A-Z]/.test(form.password) },
-                { rule: 'One number (0-9)',                 ok: /[0-9]/.test(form.password) },
-                { rule: 'One special character (@, #, !…)', ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password) },
+                { rule: 'At least 8 characters long',       ok: form.password.length >= 8 },
+                { rule: 'At least one uppercase letter (A-Z)', ok: /[A-Z]/.test(form.password) },
+                { rule: 'At least one numeric digit (0-9)',   ok: /[0-9]/.test(form.password) },
+                { rule: 'At least one special character (@, #, !…)', ok: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password) },
               ].map(({ rule, ok }) => (
-                <p key={rule} className={`flex items-center gap-1.5 ${ok ? 'text-green-400' : 'text-slate-500'}`}>
-                  {ok ? <CheckCircle size={11} /> : <span className="w-3 h-3 rounded-full border border-slate-600 inline-block" />}
+                <p key={rule} className={`flex items-center gap-1.5 ${ok ? 'text-green-400 font-medium' : 'text-slate-400'}`}>
+                  {ok ? <CheckCircle size={12} className="text-green-400" /> : <span className="w-2.5 h-2.5 rounded-full border border-slate-600 inline-block" />}
                   {rule}
                 </p>
               ))}
             </div>
           )}
 
-          {/* Global error / success */}
+          {/* Global Alert Messages */}
           {globalError && (
-            <div className="p-3 border border-primary/50 bg-primary/10 rounded text-sm text-rose-300 flex items-start gap-2">
-              <AlertCircle size={15} className="text-primary mt-0.5 shrink-0" /> {globalError}
+            <div className="p-3 border border-primary/50 bg-primary/10 rounded text-sm text-rose-300 flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-primary mt-0.5 shrink-0" />
+              <span>{globalError}</span>
             </div>
           )}
           {success && (
-            <div className="p-3 border border-green-500/40 bg-green-500/10 rounded text-sm text-green-300 flex items-center gap-2">
-              <CheckCircle size={15} className="text-green-400 shrink-0" /> {success}
+            <div className="p-3 border border-green-500/40 bg-green-500/10 rounded text-sm text-green-300 flex items-center gap-2.5">
+              <CheckCircle size={16} className="text-green-400 shrink-0" />
+              <span>{success}</span>
             </div>
           )}
 
-          {/* Submit */}
+          {/* Primary Action Button */}
           <button
+            type="button"
             onClick={submit}
             disabled={loading}
-            className="btn-red-neon w-full justify-between mt-1"
+            className="btn-red-neon w-full justify-between mt-2 cursor-pointer disabled:opacity-50"
           >
             <span>
               {loading
-                ? (mode === 'login' ? 'Signing in…' : 'Creating account…')
+                ? (mode === 'login' ? 'Signing in…' : 'Creating Account…')
                 : mode === 'login'
                   ? `Sign In as ${currentRole.label}`
-                  : 'Create Account'}
+                  : `Register as ${currentRole.label}`}
             </span>
             {!loading && <ArrowRight size={18} />}
           </button>
 
-          {/* Admin tip */}
-          {mode === 'login' && (
-            <div className="p-3 border border-white/5 bg-white/2 rounded text-xs text-slate-600 flex items-center gap-2">
-              <ShieldCheck size={13} className="text-slate-600 shrink-0" />
-              <span>
-                <span className="text-slate-400 font-semibold">Admin?</span>{' '}
-                Use your special credentials on either tab — you&apos;ll be routed to the Admin Dashboard automatically.
-              </span>
-            </div>
-          )}
-
-          {/* Firestore DB notice */}
-          <div className="flex items-center gap-2 text-xs text-slate-700 pt-1">
-            <Lock size={11} />
-            <span>Data stored securely in Firebase Firestore. Passwords encrypted server-side.</span>
-          </div>
-
         </div>
 
         {/* ── Toggle Login / Register ───────────────────────────────────── */}
-        <div className="mt-7 text-sm text-slate-500">
+        <div className="mt-7 text-sm text-slate-400 max-w-md w-full">
           {mode === 'login' ? (
             <>
-              Don&apos;t have an account?{' '}
+              Don&apos;t have an account yet?{' '}
               <button
+                type="button"
                 onClick={() => { setMode('register'); resetForm(); }}
-                className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer"
+                className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer underline underline-offset-4"
               >
                 Register here
               </button>
@@ -561,10 +558,11 @@ export const AuthPage = () => {
             <>
               Already have an account?{' '}
               <button
+                type="button"
                 onClick={() => { setMode('login'); resetForm(); }}
-                className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer"
+                className="text-primary hover:text-rose-400 font-semibold transition-colors cursor-pointer underline underline-offset-4"
               >
-                Sign in
+                Sign in here
               </button>
             </>
           )}
@@ -576,3 +574,4 @@ export const AuthPage = () => {
 };
 
 export default AuthPage;
+
