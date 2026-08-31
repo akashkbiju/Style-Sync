@@ -160,6 +160,11 @@ export const INITIAL_STAFF = [
     specialty: 'Hair & Beard Design, Senior Care Specialist',
     rating: 5.0,
     experience: '8 Years',
+    workingHistory: 'Former Director Stylist at Toni & Guy (4 Years), Specialized in Senior Care Grooming (2 Years).',
+    reviews: [
+      { user: 'Rahul M.', rating: 5, comment: 'Incredible attention to detail, easily the best haircut I ever had.' },
+      { user: 'Sanjay V.', rating: 5, comment: 'Very gentle with my grandfather. Highly recommended.' }
+    ],
     status: 'Available',
     homeServiceCertified: true,
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
@@ -173,6 +178,11 @@ export const INITIAL_STAFF = [
     specialty: 'Geriatric Care, Bedside Scalp Therapy & Reflexology',
     rating: 4.98,
     experience: '7 Years',
+    workingHistory: 'Ayurvedic Consultant at Kerala Ayurveda (3 Years), specialized in geriatric massage therapy.',
+    reviews: [
+      { user: 'Priya K.', rating: 5, comment: 'Her reflexology session relieved my mother\'s arthritis pain instantly.' },
+      { user: 'Meena R.', rating: 5, comment: 'So patient and kind. True professional.' }
+    ],
     status: 'Available',
     homeServiceCertified: true,
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
@@ -186,6 +196,11 @@ export const INITIAL_STAFF = [
     specialty: 'Classic Hot Towel Shave, Hair Styling & Scalp Spa',
     rating: 4.90,
     experience: '6 Years',
+    workingHistory: 'Head Barber at The Grooming Lounge (3 Years), known for precision fades and classic shaves.',
+    reviews: [
+      { user: 'Arjun N.', rating: 5, comment: 'The hot towel shave is an absolute must. Fantastic experience.' },
+      { user: 'Vivek T.', rating: 4, comment: 'Great styling, quick and professional.' }
+    ],
     status: 'Available',
     homeServiceCertified: true,
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
@@ -199,6 +214,11 @@ export const INITIAL_STAFF = [
     specialty: '24K Gold Facials, Arthritis Hand Therapy & Nails',
     rating: 4.95,
     experience: '5 Years',
+    workingHistory: 'Skincare Specialist at Lakme Salon (3 Years), expert in organic and gold facials.',
+    reviews: [
+      { user: 'Lakshmi P.', rating: 5, comment: 'The gold facial left my skin glowing for days. She is very gentle.' },
+      { user: 'Anjali S.', rating: 5, comment: 'Loved the personalized skincare advice during the session.' }
+    ],
     status: 'Available',
     homeServiceCertified: true,
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',

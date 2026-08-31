@@ -421,6 +421,34 @@ export const BookHomeService = () => {
                   );
                 })}
               </div>
+
+              {/* Selected Stylist Profile & Reviews Details */}
+              {selectedStylist && (
+                <div className="mt-4 p-4 rounded-lg border bg-black/20" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <h4 className="text-sm font-bold mb-2 text-primary">Specialist Profile: {selectedStylist.name}</h4>
+                  {selectedStylist.workingHistory && (
+                    <div className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Experience & History:</strong> {selectedStylist.workingHistory}
+                    </div>
+                  )}
+                  {selectedStylist.reviews && selectedStylist.reviews.length > 0 && (
+                    <div>
+                      <strong className="text-xs block mb-2" style={{ color: 'var(--text-primary)' }}>Customer Reviews:</strong>
+                      <div className="grid grid-cols-1 gap-2">
+                        {selectedStylist.reviews.map((rev, idx) => (
+                          <div key={idx} className="p-3 rounded bg-white/5 border border-white/5">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{rev.user}</span>
+                              <span className="text-[10px] text-amber-400">{'⭐'.repeat(rev.rating)}</span>
+                            </div>
+                            <div className="text-[11px] italic" style={{ color: 'var(--text-secondary)' }}>"{rev.comment}"</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Date & Time Slot */}

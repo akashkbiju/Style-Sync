@@ -6,6 +6,8 @@ import {
   INITIAL_PAYMENTS, 
   INITIAL_FEEDBACK 
 } from '../data/seedData';
+import { fetchStaffFromDB, addStaffToDB, updateStaffInDB } from '../firebase/staffService';
+import { fetchCollection, addDocument, updateDocument, deleteDocument } from '../firebase/dbService';
 
 const SalonContext = createContext();
 
@@ -66,73 +68,69 @@ export const SalonProvider = ({ children }) => {
   const LEGACY_FAKE_NAMES = new Set(['Alexander Wright', 'Sophia Chen', 'Marcus Vance', 'Elena Rostova']);
 
   const [staff, setStaff] = useState(() => {
+    // Initial optimistic load from localStorage for fast UI
     const saved = localStorage.getItem('stylesync_staff');
-    let staffList = INITIAL_STAFF;
-    if (saved) {
-      const parsed = JSON.parse(saved).filter(s => !LEGACY_FAKE_NAMES.has(s.name));
-      const existingNames = new Set(parsed.map(s => s.name));
-      const newItems = INITIAL_STAFF.filter(s => !existingNames.has(s.name));
-      staffList = [...parsed, ...newItems];
-    }
-
-    // Merge registered staff accounts from localStorage
-    try {
-      const registeredAccounts = JSON.parse(localStorage.getItem('stylesync_staff_accounts') || '[]');
-      registeredAccounts.forEach(acc => {
-        if (!staffList.some(s => s.name === acc.name || s.email === acc.email)) {
-          staffList.push({
-            id: acc.uid || `stf-${Date.now()}`,
-            name: acc.name,
-            role: acc.staffRole || 'Senior Stylist & Care Specialist',
-            specialty: acc.staffRole || 'Hair Styling, Grooming & Senior Home Care',
-            rating: 5.0,
-            experience: 'Certified Specialist',
-            status: 'Available',
-            homeServiceCertified: true,
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-            email: acc.email,
-            phone: acc.phone || '',
-            isLoggedIn: false
-          });
-        }
-      });
-    } catch (e) {
-      console.warn('Error merging registered staff accounts:', e);
-    }
-
-    // If current logged-in user is a staff member, mark them as active & logged in
-    try {
-      const savedUser = localStorage.getItem('stylesync_current_user');
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
-        if (u.role === 'staff') {
-          const idx = staffList.findIndex(s => s.name === u.name || s.email === u.email);
-          if (idx >= 0) {
-            staffList[idx] = { ...staffList[idx], isLoggedIn: true, status: 'Available' };
-          } else {
-            staffList.unshift({
-              id: u.uid || `stf-${Date.now()}`,
-              name: u.name,
-              role: u.staffRole || 'Senior Stylist & Care Specialist',
-              specialty: u.staffRole || 'Hair Styling, Grooming & Senior Home Care',
-              rating: 5.0,
-              experience: 'Certified Specialist',
-              status: 'Available',
-              homeServiceCertified: true,
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-              email: u.email,
-              phone: u.phone || '',
-              isLoggedIn: true
-            });
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Error setting active staff status:', e);
-    }
-
-    return staffList;
+    if (saved) return JSON.parse(saved);
+    return INITIAL_STAFF; // Fallback to seed data initially
   });
+
+  const [isLoadingStaff, setIsLoadingStaff] = useState(true);
+
+  // Fetch real data from Firestore on mount
+  useEffect(() => {
+    const loadAllCollections = async () => {
+      try {
+        setIsLoadingStaff(true);
+        
+        // 1. Staff
+        const dbStaff = await fetchCollection('staff');
+        if (dbStaff && dbStaff.length > 0) setStaff(dbStaff);
+        else {
+          for (const s of INITIAL_STAFF) await addDocument('staff', s);
+          setStaff(INITIAL_STAFF);
+        }
+
+        // 2. Services
+        const dbServices = await fetchCollection('services');
+        if (dbServices && dbServices.length > 0) setServices(dbServices);
+        else {
+          for (const s of INITIAL_SERVICES) await addDocument('services', s);
+          setServices(INITIAL_SERVICES);
+        }
+
+        // 3. Bookings
+        const dbBookings = await fetchCollection('bookings');
+        if (dbBookings && dbBookings.length > 0) setBookings(dbBookings);
+        else {
+          for (const b of INITIAL_BOOKINGS) await addDocument('bookings', b);
+          setBookings(INITIAL_BOOKINGS);
+        }
+
+        // 4. Payments
+        const dbPayments = await fetchCollection('payments');
+        if (dbPayments && dbPayments.length > 0) setPayments(dbPayments);
+        else {
+          for (const p of INITIAL_PAYMENTS) await addDocument('payments', p);
+          setPayments(INITIAL_PAYMENTS);
+        }
+
+        // 5. Feedback
+        const dbFeedback = await fetchCollection('feedback');
+        if (dbFeedback && dbFeedback.length > 0) setFeedback(dbFeedback);
+        else {
+          for (const f of INITIAL_FEEDBACK) await addDocument('feedback', f);
+          setFeedback(INITIAL_FEEDBACK);
+        }
+
+      } catch (error) {
+        console.error("Failed to load collections from Firestore:", error);
+      } finally {
+        setIsLoadingStaff(false);
+      }
+    };
+    
+    loadAllCollections();
+  }, []);
 
   const [bookings, setBookings] = useState(() => {
     const saved = localStorage.getItem('stylesync_bookings');
@@ -182,7 +180,7 @@ export const SalonProvider = ({ children }) => {
   }, [feedback]);
 
   // Actions & Operations
-  const addBooking = (newBookingData, paymentDetails) => {
+  const addBooking = async (newBookingData, paymentDetails) => {
     const bookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
     const newBooking = {
       id: bookingId,
@@ -194,6 +192,7 @@ export const SalonProvider = ({ children }) => {
     };
 
     setBookings(prev => [newBooking, ...prev]);
+    addDocument('bookings', newBooking).catch(console.error);
 
     // Record Payment
     if (paymentDetails) {
@@ -209,6 +208,7 @@ export const SalonProvider = ({ children }) => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setPayments(prev => [paymentEntry, ...prev]);
+      addDocument('payments', paymentEntry).catch(console.error);
     }
 
     return newBooking;
@@ -218,12 +218,14 @@ export const SalonProvider = ({ children }) => {
     setBookings(prev => 
       prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b)
     );
+    updateDocument('bookings', bookingId, { status: newStatus }).catch(console.error);
   };
 
   const assignStylistToBooking = (bookingId, stylistName) => {
     setBookings(prev => 
       prev.map(b => b.id === bookingId ? { ...b, stylistName: stylistName } : b)
     );
+    updateDocument('bookings', bookingId, { stylistName }).catch(console.error);
   };
 
   const addService = (newService) => {
@@ -232,13 +234,15 @@ export const SalonProvider = ({ children }) => {
       ...newService
     };
     setServices(prev => [srv, ...prev]);
+    addDocument('services', srv).catch(console.error);
   };
 
   const deleteService = (serviceId) => {
     setServices(prev => prev.filter(s => s.id !== serviceId));
+    deleteDocument('services', serviceId).catch(console.error);
   };
 
-  const addStaffMember = (newStaff) => {
+  const addStaffMember = async (newStaff) => {
     const stf = {
       id: `stf-${Date.now()}`,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
@@ -247,13 +251,24 @@ export const SalonProvider = ({ children }) => {
       homeServiceCertified: true,
       ...newStaff
     };
-    setStaff(prev => [stf, ...prev]);
+    // Save to Firestore
+    try {
+      await addStaffToDB(stf);
+      setStaff(prev => [stf, ...prev]);
+    } catch(err) {
+      console.error("Failed to add staff member to DB", err);
+    }
   };
 
-  const updateStaffStatus = (staffId, status) => {
-    setStaff(prev => 
-      prev.map(s => s.id === staffId ? { ...s, status } : s)
-    );
+  const updateStaffStatus = async (staffId, status) => {
+    try {
+      await updateStaffInDB(staffId, { status });
+      setStaff(prev => 
+        prev.map(s => s.id === staffId ? { ...s, status } : s)
+      );
+    } catch(err) {
+      console.error("Failed to update staff status in DB", err);
+    }
   };
 
   const addFeedback = (newFb) => {
@@ -263,6 +278,7 @@ export const SalonProvider = ({ children }) => {
       ...newFb
     };
     setFeedback(prev => [fb, ...prev]);
+    addDocument('feedback', fb).catch(console.error);
   };
 
   // Login & Logout
