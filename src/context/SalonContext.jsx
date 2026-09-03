@@ -188,7 +188,9 @@ export const SalonProvider = ({ children }) => {
       status: 'Pending',
       paymentStatus: paymentDetails ? `Paid (${paymentDetails.method})` : 'Paid (Online)',
       paymentId: paymentDetails ? paymentDetails.id : `pay_${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      userId: currentUser?.uid || null,
+      userEmail: currentUser?.email || null
     };
 
     setBookings(prev => [newBooking, ...prev]);
