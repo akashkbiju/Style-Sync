@@ -5,7 +5,8 @@ import { TicketModal } from '../../components/TicketModal';
 import { Calendar, Clock, User, Phone, Scissors, CheckCircle2, Sparkles, Check } from 'lucide-react';
 
 export const BookInShop = () => {
-  const { services, staff, addBooking, setCustomerTab, currentUser } = useSalon();
+  const { services, staff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
+  const todayDateStr = new Date().toISOString().substring(0, 10);
 
   // Find if any staff is actively logged in
   const loggedInStaff = staff.find(s => s.isLoggedIn) || staff[0];
@@ -34,10 +35,25 @@ export const BookInShop = () => {
       alert('Please fill in your name and contact phone number.');
       return;
     }
+    
+    // Check for double booking
+    const isConflict = bookings.some(b => 
+      b.stylistName === selectedStylistName &&
+      b.date === date &&
+      b.time === time &&
+      b.status !== 'Cancelled' &&
+      b.status !== 'Rejected'
+    );
+
+    if (isConflict) {
+      alert(`Sorry, ${selectedStylistName} is already booked on ${date} at ${time}. Please select a different time or stylist.`);
+      return;
+    }
+
     setShowRazorpay(true);
   };
 
-  const handlePaymentSuccess = (paymentDetails) => {
+  const handlePaymentSuccess = async (paymentDetails) => {
     setShowRazorpay(false);
     const bookingData = {
       customerName,
@@ -54,7 +70,7 @@ export const BookInShop = () => {
       amount: selectedService.price
     };
 
-    const newBk = addBooking(bookingData, paymentDetails);
+    const newBk = await addBooking(bookingData, paymentDetails);
     setCreatedBooking(newBk);
   };
 
@@ -211,6 +227,7 @@ export const BookInShop = () => {
                 type="date" 
                 className="form-input" 
                 value={date} 
+                min={todayDateStr}
                 onChange={(e) => setDate(e.target.value)} 
                 required 
               />
@@ -303,11 +320,12 @@ export const BookInShop = () => {
       {/* Razorpay Simulation Modal */}
       {showRazorpay && (
         <RazorpayModal
-          amount={selectedService.price}
-          customerName={customerName}
-          customerPhone={customerPhone}
-          serviceTitle={selectedService.title}
-          onSuccess={handlePaymentSuccess}
+          bookingDetails={{
+            serviceTitle: selectedService.title,
+            amount: selectedService.price,
+            type: 'in-shop'
+          }}
+          onPaymentSuccess={handlePaymentSuccess}
           onClose={() => setShowRazorpay(false)}
         />
       )}

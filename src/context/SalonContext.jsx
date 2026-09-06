@@ -84,42 +84,52 @@ export const SalonProvider = ({ children }) => {
         
         // 1. Staff
         const dbStaff = await fetchCollection('staff');
-        if (dbStaff && dbStaff.length > 0) setStaff(dbStaff);
-        else {
-          for (const s of INITIAL_STAFF) await addDocument('staff', s);
-          setStaff(INITIAL_STAFF);
+        if (dbStaff !== null) {
+          if (dbStaff.length > 0) setStaff(dbStaff);
+          else {
+            for (const s of INITIAL_STAFF) await addDocument('staff', s).catch(e => {});
+            setStaff(INITIAL_STAFF);
+          }
         }
 
         // 2. Services
         const dbServices = await fetchCollection('services');
-        if (dbServices && dbServices.length > 0) setServices(dbServices);
-        else {
-          for (const s of INITIAL_SERVICES) await addDocument('services', s);
-          setServices(INITIAL_SERVICES);
+        if (dbServices !== null) {
+          if (dbServices.length > 0) setServices(dbServices);
+          else {
+            for (const s of INITIAL_SERVICES) await addDocument('services', s).catch(e => {});
+            setServices(INITIAL_SERVICES);
+          }
         }
 
         // 3. Bookings
         const dbBookings = await fetchCollection('bookings');
-        if (dbBookings && dbBookings.length > 0) setBookings(dbBookings);
-        else {
-          for (const b of INITIAL_BOOKINGS) await addDocument('bookings', b);
-          setBookings(INITIAL_BOOKINGS);
+        if (dbBookings !== null) {
+          if (dbBookings.length > 0) setBookings(dbBookings);
+          else {
+            for (const b of INITIAL_BOOKINGS) await addDocument('bookings', b).catch(e => {});
+            setBookings(INITIAL_BOOKINGS);
+          }
         }
 
         // 4. Payments
         const dbPayments = await fetchCollection('payments');
-        if (dbPayments && dbPayments.length > 0) setPayments(dbPayments);
-        else {
-          for (const p of INITIAL_PAYMENTS) await addDocument('payments', p);
-          setPayments(INITIAL_PAYMENTS);
+        if (dbPayments !== null) {
+          if (dbPayments.length > 0) setPayments(dbPayments);
+          else {
+            for (const p of INITIAL_PAYMENTS) await addDocument('payments', p).catch(e => {});
+            setPayments(INITIAL_PAYMENTS);
+          }
         }
 
         // 5. Feedback
         const dbFeedback = await fetchCollection('feedback');
-        if (dbFeedback && dbFeedback.length > 0) setFeedback(dbFeedback);
-        else {
-          for (const f of INITIAL_FEEDBACK) await addDocument('feedback', f);
-          setFeedback(INITIAL_FEEDBACK);
+        if (dbFeedback !== null) {
+          if (dbFeedback.length > 0) setFeedback(dbFeedback);
+          else {
+            for (const f of INITIAL_FEEDBACK) await addDocument('feedback', f).catch(e => {});
+            setFeedback(INITIAL_FEEDBACK);
+          }
         }
 
       } catch (error) {

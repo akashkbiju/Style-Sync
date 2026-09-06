@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 
 export const BookHomeService = () => {
-  const { services, staff, addBooking, setCustomerTab, currentUser } = useSalon();
+  const { services, staff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
+  const todayDateStr = new Date().toISOString().substring(0, 10);
 
   // All home services
   const homeServices = services.filter(s => s.homeServiceAvailable);
@@ -88,10 +89,25 @@ export const BookHomeService = () => {
       alert('Please provide the client name, contact phone, and complete home address.');
       return;
     }
+    
+    // Check for double booking
+    const isConflict = bookings.some(b => 
+      b.stylistName === selectedStylistName &&
+      b.date === date &&
+      b.time === time &&
+      b.status !== 'Cancelled' &&
+      b.status !== 'Rejected'
+    );
+
+    if (isConflict) {
+      alert(`Sorry, ${selectedStylistName} is already booked on ${date} at ${time}. Please select a different time or stylist.`);
+      return;
+    }
+
     setShowRazorpay(true);
   };
 
-  const handlePaymentSuccess = (paymentDetails) => {
+  const handlePaymentSuccess = async (paymentDetails) => {
     setShowRazorpay(false);
     
     // Compile assistance requirements
@@ -117,7 +133,7 @@ export const BookHomeService = () => {
       amount: selectedService.price
     };
 
-    const newBk = addBooking(bookingData, paymentDetails);
+    const newBk = await addBooking(bookingData, paymentDetails);
     setCreatedBooking(newBk);
   };
 
@@ -461,6 +477,7 @@ export const BookHomeService = () => {
                   type="date" 
                   className="form-input" 
                   value={date} 
+                  min={todayDateStr}
                   onChange={(e) => setDate(e.target.value)} 
                   required 
                 />
