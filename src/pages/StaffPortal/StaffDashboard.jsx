@@ -12,13 +12,14 @@ import {
   Phone,
   Scissors,
   Home,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 
 export const StaffDashboard = () => {
-  const { bookings, updateBookingStatus, currentUser, staff, addService } = useSalon();
+  const { bookings, updateBookingStatus, currentUser, staff, addService, feedback, updateStaffProfile } = useSalon();
   
-  const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'services' | 'support'
+  const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'services' | 'reviews' | 'profile' | 'support'
   const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState(null);
   const [newStatusValue, setNewStatusValue] = useState('In-Progress');
 
@@ -35,16 +36,39 @@ export const StaffDashboard = () => {
     specialty: 'Hair Styling & Senior Citizen Home Care'
   };
 
-  // Filter bookings for this logged in staff or all salon bookings if unassigned
-  const staffBookings = bookings.filter(b => 
-    !b.stylistName || b.stylistName === staffProfile.name || b.stylistName.toLowerCase().includes(staffProfile.name.toLowerCase().split(' ')[0])
+  // Strictly filter bookings for THIS specific logged-in staff member only
+  const displayBookings = bookings.filter(b => 
+    b.stylistName === staffProfile.name
   );
-  const displayBookings = staffBookings.length > 0 ? staffBookings : bookings;
 
-  // Extract unique customers from actual bookings
+  // Extract unique customers from ONLY this staff member's bookings
   const uniqueCustomers = Array.from(
-    new Map(bookings.map(b => [b.customerName, b])).values()
+    new Map(displayBookings.map(b => [b.customerName, b])).values()
   );
+
+  const [profileSpecialty, setProfileSpecialty] = useState(staffProfile.specialty || '');
+  const [profileExperience, setProfileExperience] = useState(staffProfile.experience || '');
+  const [profileWorkingHistory, setProfileWorkingHistory] = useState(staffProfile.workingHistory || '');
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!staffProfile.id) return;
+    try {
+      await updateStaffProfile(staffProfile.id, {
+        specialty: profileSpecialty,
+        experience: profileExperience,
+        workingHistory: profileWorkingHistory
+      });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+    } catch (err) {
+      alert("Error updating profile.");
+    }
+  };
+
+  // Filter feedback for this staff member
+  const staffReviews = feedback ? feedback.filter(f => f.stylistName === staffProfile.name) : [];
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2.5rem', minHeight: '80vh', padding: '1rem 0' }}>
@@ -154,6 +178,52 @@ export const StaffDashboard = () => {
           }}
         >
           <Scissors size={18} /> Propose Service
+        </button>
+
+        <button
+          onClick={() => setActiveSideTab('reviews')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideTab === 'reviews' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideTab === 'reviews' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideTab === 'reviews' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideTab === 'reviews' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <CheckCircle size={18} /> My Reviews ({staffReviews.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSideTab('profile')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideTab === 'profile' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideTab === 'profile' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideTab === 'profile' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideTab === 'profile' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <User size={18} /> Profile Settings
         </button>
 
         <button
@@ -443,6 +513,76 @@ export const StaffDashboard = () => {
             >
               Add Service to Catalog
             </button>
+          </div>
+        ) : activeSideTab === 'reviews' ? (
+          <div>
+            <h2 className="font-serif gold-text" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>My Customer Reviews</h2>
+            {staffReviews.length === 0 ? (
+              <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
+                <p style={{ color: 'var(--text-secondary)' }}>You don't have any reviews yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+                {staffReviews.map(rev => (
+                  <div key={rev.id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong style={{ color: '#fff', fontSize: '1.1rem' }}>{rev.customerName}</strong>
+                      <span style={{ color: '#fbbf24', fontSize: '1.1rem' }}>{'★'.repeat(rev.rating)}</span>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      <strong>Service:</strong> {rev.serviceTitle} <br/>
+                      <strong>Date:</strong> {rev.date}
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, marginTop: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '4px', borderLeft: '2px solid var(--accent-gold)' }}>
+                      "{rev.comments}"
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeSideTab === 'profile' ? (
+          <div className="neon-panel" style={{ padding: '2rem' }}>
+            <h2 className="font-serif gold-text" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>Edit Public Profile</h2>
+            <form onSubmit={handleUpdateProfile}>
+              <div className="form-group">
+                <label className="form-label">Specialty & Title</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={profileSpecialty} 
+                  onChange={e => setProfileSpecialty(e.target.value)} 
+                  placeholder="e.g. Master Stylist & Color Expert" 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Experience (Years)</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={profileExperience} 
+                  onChange={e => setProfileExperience(e.target.value)} 
+                  placeholder="e.g. 5+ Years" 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Working History & Bio</label>
+                <textarea 
+                  className="form-textarea" 
+                  rows={4} 
+                  value={profileWorkingHistory} 
+                  onChange={e => setProfileWorkingHistory(e.target.value)} 
+                  placeholder="Describe your background and expertise for customers to see..." 
+                  required 
+                />
+              </div>
+              <button type="submit" className="btn-gold" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <Check size={18} /> Save Profile Settings
+              </button>
+              {profileSaved && <span style={{ marginLeft: '1rem', color: '#10b981', fontSize: '0.9rem' }}>Profile saved successfully!</span>}
+            </form>
           </div>
         ) : (
           <div className="neon-panel" style={{ padding: '2rem' }}>

@@ -652,7 +652,7 @@ export const BookHomeService = () => {
               className="w-full btn-red-neon py-4 text-sm font-bold uppercase tracking-widest cursor-pointer shadow-lg flex items-center justify-center gap-2"
             >
               <HeartHandshake size={18} />
-              Book Home Visit (₹{selectedService.price})
+              Pay ₹{selectedService.price}
             </button>
 
             {/* Trust Badges */}

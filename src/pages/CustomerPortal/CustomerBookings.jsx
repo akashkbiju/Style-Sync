@@ -22,6 +22,61 @@ export const CustomerBookings = () => {
     return b.status.toLowerCase() === filter.toLowerCase();
   });
 
+  const handleCancelBooking = (bk) => {
+    try {
+      const timeMatch = bk.time.match(/(\d+):(\d+)\s+(AM|PM)/i);
+      if (!timeMatch) throw new Error("Invalid time format");
+      
+      let [_, hours, minutes, modifier] = timeMatch;
+      hours = parseInt(hours, 10);
+      if (hours === 12) hours = 0;
+      if (modifier.toUpperCase() === 'PM') hours += 12;
+
+      const appointmentDate = new Date(`${bk.date}T${hours.toString().padStart(2, '0')}:${minutes}:00`);
+      const now = new Date();
+      
+      const diffMs = appointmentDate - now;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      
+      const isSameDay = bk.date === now.toISOString().substring(0, 10);
+
+      if (diffHours <= 0) {
+        alert('This appointment has already passed or is currently happening. Cancellation is not allowed.');
+        return;
+      }
+
+      if (isSameDay) {
+        if (diffHours < 2) {
+          alert('Same-day bookings must be cancelled at least 2 hours before the appointment time.');
+          return;
+        }
+      } else {
+        if (diffHours < 12) {
+          alert('Future bookings must be cancelled at least 12 hours before the appointment time.');
+          return;
+        }
+      }
+
+      const refundAmount = (bk.amount * 0.95).toFixed(2);
+      const fee = (bk.amount * 0.05).toFixed(2);
+
+      const confirmed = window.confirm(
+        `Are you sure you want to cancel this booking?\n\n` +
+        `Cancellation Policy:\n` +
+        `- A 5% service fee (₹${fee}) will be deducted.\n` +
+        `- Your refund: ₹${refundAmount}\n\n` +
+        `Proceed with cancellation?`
+      );
+      
+      if (confirmed) {
+        updateBookingStatus(bk.id, 'Cancelled', `Refund Processing (₹${refundAmount})`);
+      }
+    } catch(err) {
+      console.error(err);
+      alert('Unable to process cancellation at this time. Please contact support.');
+    }
+  };
+
   return (
     <div>
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -135,11 +190,7 @@ export const CustomerBookings = () => {
 
                 {bk.status === 'Pending' && (
                   <button 
-                    onClick={() => {
-                      if(window.confirm('Are you sure you want to cancel this booking?')) {
-                        updateBookingStatus(bk.id, 'Cancelled');
-                      }
-                    }} 
+                    onClick={() => handleCancelBooking(bk)} 
                     className="btn-secondary" 
                     style={{ padding: '0.45rem 1rem', fontSize: '0.75rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }}
                   >

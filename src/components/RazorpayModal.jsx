@@ -223,7 +223,7 @@ export const RazorpayModal = ({ bookingDetails, onPaymentSuccess, onClose }) => 
               </>
             ) : (
               <>
-                <CheckCircle2 size={20} /> Complete Payment (₹{bookingDetails?.amount})
+                Pay ₹{bookingDetails?.amount}
               </>
             )}
           </button>
