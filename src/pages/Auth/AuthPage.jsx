@@ -105,7 +105,7 @@ export const AuthPage = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { loginUser } = useSalon();
+  const { loginUser, addStaffMember } = useSalon();
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', staffRole: '',
@@ -186,7 +186,7 @@ export const AuthPage = () => {
 
     setLoading(true);
     try {
-      await firebaseRegister({
+      const newUser = await firebaseRegister({
         name:      form.name,
         email:     form.email,
         password:  form.password,
@@ -194,6 +194,23 @@ export const AuthPage = () => {
         role:      selectedRole,
         staffRole: form.staffRole,
       });
+
+      // If this is a staff registration, immediately add them to the staff catalog
+      if (selectedRole === 'staff') {
+        await addStaffMember({
+          id: newUser.uid,
+          name: form.name,
+          email: form.email,
+          role: form.staffRole,
+          specialty: form.staffRole, // Using role as default specialty until they edit profile
+          experience: 'New Staff',
+          workingHistory: 'Just joined the team!',
+          rating: 5.0, // Default rating
+          status: 'Available',
+          isLoggedIn: false // Will become true upon login
+        });
+      }
+
       setSuccess('Account created successfully! Please sign in with your credentials.');
       setMode('login');
       resetForm(true);
