@@ -266,19 +266,25 @@ export const SalonProvider = ({ children }) => {
 
   const addStaffMember = async (newStaff) => {
     const stf = {
-      id: `stf-${Date.now()}`,
+      id: newStaff.id || `stf-${Date.now()}`,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       rating: 5.0,
       status: 'Available',
       homeServiceCertified: true,
       ...newStaff
     };
+    
+    // Ensure id is not undefined if newStaff passed an undefined id
+    if (!stf.id) stf.id = `stf-${Date.now()}`;
+
+    // Optimistic UI update so it appears instantly for the user
+    setStaff(prev => [stf, ...prev]);
+
     // Save to Firestore
     try {
       await addStaffToDB(stf);
-      setStaff(prev => [stf, ...prev]);
     } catch(err) {
-      console.error("Failed to add staff member to DB", err);
+      console.warn("Failed to add staff member to DB, keeping in memory fallback", err);
     }
   };
 
