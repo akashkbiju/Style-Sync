@@ -97,31 +97,16 @@ export const AIChatbot = () => {
 
   return (
     <>
-      {/* Floating Chatbot Trigger Icon (Matching Bottom-Right Icon in Screenshots 2 & 3) */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 999,
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'var(--accent-red)',
-          color: '#ffffff',
-          border: '2px solid rgba(255, 255, 255, 0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          boxShadow: '0 0 25px rgba(255, 0, 60, 0.7)',
-          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-        }}
-        title="StyleSync AI Customer Support Chatbot"
-      >
-        <MessageSquare size={24} fill="#ffffff" color="#ffffff" />
-      </button>
+      {/* Floating Chatbot Trigger Icon (Matching Provided HTML Template Code) */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-primary hover:bg-rose-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center cursor-pointer border-none"
+          title="StyleSync AI Customer Support Chatbot"
+        >
+          <span className="material-icons">chat_bubble</span>
+        </button>
+      </div>
 
       {/* Floating Chat Modal */}
       {isOpen && (
