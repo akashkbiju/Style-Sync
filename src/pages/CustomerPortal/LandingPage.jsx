@@ -2,7 +2,7 @@ import React from 'react';
 import { useSalon } from '../../context/SalonContext';
 
 export const LandingPage = () => {
-  const { setCustomerTab, setActiveRole } = useSalon();
+  const { setCustomerTab } = useSalon();
 
   const servicesList = [
     {
@@ -97,7 +97,7 @@ export const LandingPage = () => {
             <div className="pt-4 flex flex-wrap gap-4">
               {/* Primary Animated Hover Get Started Button */}
               <button 
-                onClick={() => { setActiveRole('customer'); setCustomerTab('home'); }}
+                onClick={() => setCustomerTab('home')}
                 className="group relative px-10 py-4 bg-transparent border border-primary text-white font-bold uppercase tracking-[0.2em] overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] cursor-pointer"
               >
                 <span className="relative z-10">Get Started</span>
@@ -106,7 +106,7 @@ export const LandingPage = () => {
 
               {/* Secondary Home Service Button */}
               <button 
-                onClick={() => { setActiveRole('customer'); setCustomerTab('book-home'); }}
+                onClick={() => setCustomerTab('book-home')}
                 className="px-8 py-4 bg-transparent border border-white/40 text-white font-bold uppercase tracking-[0.15em] hover:border-white transition-all cursor-pointer"
               >
                 Elderly Home Booking
@@ -125,7 +125,6 @@ export const LandingPage = () => {
               <div 
                 key={service.id}
                 onClick={() => {
-                  setActiveRole('customer');
                   if (service.isElderly) {
                     setCustomerTab('book-home');
                   } else {

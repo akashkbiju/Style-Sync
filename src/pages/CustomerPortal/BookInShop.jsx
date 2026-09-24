@@ -175,8 +175,12 @@ export const BookInShop = () => {
           </div>
 
           {/* Submit Action */}
-          <button type="submit" className="btn-gold" style={{ width: '100%', justifyContent: 'center', padding: '0.9rem', fontSize: '1.05rem' }}>
-            <Sparkles size={18} /> Proceed to Razorpay Test Payment (₹{selectedService?.price})
+          <button 
+            type="submit" 
+            className="btn-red-neon" 
+            style={{ width: '100%', justifyContent: 'center', padding: '1rem', fontSize: '0.95rem' }}
+          >
+            <Sparkles size={18} /> Proceed to Razorpay Payment (₹{selectedService?.price})
           </button>
 
         </form>

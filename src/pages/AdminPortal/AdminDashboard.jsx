@@ -36,8 +36,8 @@ export const AdminDashboard = () => {
     services, 
     payments, 
     feedback,
-    setActiveRole,
-    setCustomerTab
+    logoutUser,
+    currentUser
   } = useSalon();
 
   const [activeSideNav, setActiveSideNav] = useState('overview'); // 'overview' | 'staff' | 'services' | 'reports' | 'home-requests'
@@ -224,9 +224,9 @@ export const AdminDashboard = () => {
               </h1>
 
               <button 
-                onClick={() => { setActiveRole('customer'); setCustomerTab('landing'); }}
+                onClick={() => { if(window.confirm('Sign out of admin panel?')) logoutUser(); }}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}
-                title="Exit Admin View"
+                title="Sign Out"
               >
                 <LogOut size={18} />
               </button>
