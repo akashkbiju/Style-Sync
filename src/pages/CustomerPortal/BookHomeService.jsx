@@ -475,7 +475,7 @@ export const BookHomeService = () => {
                     </div>
                   )}
                   {(() => {
-                    const recentReviews = feedback ? feedback.filter(f => f.stylistName === selectedStylist.name).slice(0, 3) : [];
+                    const recentReviews = feedback ? feedback.filter(f => f.stylistName === selectedStylist.name).slice(0, 4) : [];
                     if (recentReviews.length === 0) return null;
                     return (
                       <div>
