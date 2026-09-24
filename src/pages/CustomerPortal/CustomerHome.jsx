@@ -387,6 +387,7 @@ export const CustomerHome = () => {
                   addFeedback({
                     customerName: currentUser?.name || 'Valued Client',
                     serviceTitle: 'Haircut & Styling',
+                    stylistName: 'Any Stylist',
                     rating: newRating,
                     comment: newFeedbackComment
                   });

@@ -534,7 +534,7 @@ export const StaffDashboard = () => {
                       <strong>Date:</strong> {rev.date}
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, marginTop: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '4px', borderLeft: '2px solid var(--accent-gold)' }}>
-                      "{rev.comments}"
+                      "{rev.comment}"
                     </p>
                   </div>
                 ))}

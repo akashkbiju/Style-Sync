@@ -15,6 +15,7 @@ export const FeedbackModal = ({ booking, onClose }) => {
     addFeedback({
       customerName: booking?.customerName || 'Valued Customer',
       serviceTitle: booking?.serviceTitle || 'Salon Service',
+      stylistName: booking?.stylistName || 'Unknown Stylist',
       rating,
       comment
     });
