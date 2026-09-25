@@ -42,30 +42,21 @@ export const AdminDashboard = () => {
 
   const [activeSideNav, setActiveSideNav] = useState('overview'); // 'overview' | 'staff' | 'services' | 'reports' | 'home-requests'
 
-  // Revenue chart data matching Screenshot 4 ($0 to $2500, Jan-Aug)
+  // Revenue chart data matching INR currency
   const revenueChartData = [
-    { month: 'Jan', amount: 150 },
-    { month: 'Feb', amount: 650 },
-    { month: 'Mar', amount: 500 },
-    { month: 'Apr', amount: 800 },
-    { month: 'May', amount: 1100 },
-    { month: 'Jun', amount: 1650 },
-    { month: 'Jul', amount: 1600 },
-    { month: 'Aug', amount: 2350 }
+    { month: 'Jan', amount: 15000 },
+    { month: 'Feb', amount: 32000 },
+    { month: 'Mar', amount: 28000 },
+    { month: 'Apr', amount: 45000 },
+    { month: 'May', amount: 58000 },
+    { month: 'Jun', amount: 72000 },
+    { month: 'Jul', amount: 84000 },
+    { month: 'Aug', amount: 96000 }
   ];
 
-  // Hardcoded recent bookings matching Screenshot 4 list
-  const recentBookingsList = [
-    { name: 'Arina Barnt', service: 'Services Manicure', time: '10:00 PM' },
-    { name: 'Jerry Shewm', service: 'Services Haircut', time: '10:00 PM' },
-    { name: 'Ericia Staw', service: 'Services Manicure', time: '18:00 PM' },
-    { name: 'Klath Witherson', service: 'Services Styling', time: '10:30 PM' },
-    { name: 'David William', service: 'Services Haircut', time: '13:00 PM' },
-    { name: 'Jonn Shows', service: 'Services Manicure', time: '13:30 PM' },
-    { name: 'Dook Ella', service: 'Services Manicure', time: '12:30 PM' },
-    { name: 'Elven Black', service: 'Services Styling', time: '10:30 PM' },
-    { name: 'Jennry Maria', service: 'Services Styling', time: '8:00 PM' }
-  ];
+  // Calculate live statistics
+  const totalRevenue = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const activeStaffCount = staff.filter(s => s.status === 'Available').length;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2rem', minHeight: '82vh', padding: '1rem 0' }}>
@@ -266,7 +257,7 @@ export const AdminDashboard = () => {
                 {/* Bottom Row: 2 Big Stat Cards (Matching Screenshot 4) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   
-                  {/* Stat Card 1: Active Staff 24 */}
+                  {/* Stat Card 1: Active Staff */}
                   <div className="neon-card" style={{
                     padding: '1.5rem',
                     textAlign: 'center',
@@ -274,17 +265,17 @@ export const AdminDashboard = () => {
                     boxShadow: '0 0 20px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.15)'
                   }}>
                     <h4 className="font-serif" style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.5rem', fontWeight: 500 }}>
-                      Active Staff
+                      Active Staff Roster
                     </h4>
                     <div style={{ fontSize: '3.2rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
-                      24
+                      {staff.length}
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                      Active Members
+                      Certified Specialists Available
                     </p>
                   </div>
 
-                  {/* Stat Card 2: New Customers 150 */}
+                  {/* Stat Card 2: Total Bookings */}
                   <div className="neon-card" style={{
                     padding: '1.5rem',
                     textAlign: 'center',
@@ -292,13 +283,13 @@ export const AdminDashboard = () => {
                     boxShadow: '0 0 20px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.15)'
                   }}>
                     <h4 className="font-serif" style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.5rem', fontWeight: 500 }}>
-                      New Customers
+                      Total Bookings
                     </h4>
                     <div style={{ fontSize: '3.2rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
-                      150
+                      {bookings.length}
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                      New Customers
+                      Live Appointments Recorded
                     </p>
                   </div>
 
@@ -306,37 +297,46 @@ export const AdminDashboard = () => {
 
               </div>
 
-              {/* Right Column: Recent Bookings Feed (Matching Screenshot 4 Sidebar) */}
+              {/* Right Column: Recent Bookings Feed (Live Data) */}
               <div className="neon-card" style={{ padding: '1.25rem', background: 'rgba(16, 16, 24, 0.85)', display: 'flex', flexDirection: 'column' }}>
                 <h3 className="font-serif" style={{ fontSize: '1.4rem', color: '#ffffff', marginBottom: '1rem', fontWeight: 500 }}>
-                  Recent Bookings
+                  Recent Bookings Feed
                 </h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', overflowY: 'auto', maxHeight: '420px', paddingRight: '0.25rem' }}>
-                  {recentBookingsList.map((item, idx) => (
-                    <div 
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        justify: 'space-between',
-                        alignItems: 'center',
-                        paddingBottom: '0.65rem',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                      }}
-                    >
-                      <div>
-                        <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.9rem' }}>
-                          {item.name}
+                  {bookings.length === 0 ? (
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No bookings found.</p>
+                  ) : (
+                    bookings.slice(0, 10).map((b, idx) => (
+                      <div 
+                        key={b.id || idx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          paddingBottom: '0.65rem',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.9rem' }}>
+                            {b.customerName}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                            {b.serviceTitle} {b.type === 'home-service' ? '🏡 (Home Visit)' : '✂️ (In-Shop)'}
+                          </div>
                         </div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                          {item.service}
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>
+                            {b.time}
+                          </div>
+                          <div style={{ color: 'var(--accent-gold)', fontSize: '0.75rem', fontWeight: 600 }}>
+                            ₹{b.amount}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>
-                        {item.time}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
               </div>
