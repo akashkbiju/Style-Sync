@@ -61,6 +61,11 @@ const runValidations = ({ mode, role, form }) => {
     if (role === 'staff' && !form.staffRole) {
       errors.staffRole = 'Please select your specialization.';
     }
+
+    // ── Staff Experience ────────────────────────────────────────────────
+    if (role === 'staff' && !form.experience.trim()) {
+      errors.experience = 'Please enter your years of experience.';
+    }
   }
 
   return errors;
@@ -105,11 +110,12 @@ export const AuthPage = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { loginUser, addStaffMember } = useSalon();
+  const { loginUser, submitStaffRequest } = useSalon();
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', staffRole: '',
     password: '', confirmPassword: '',
+    experience: '', workingHistory: '',
   });
 
   const setField = (field) => (e) => {
@@ -119,7 +125,7 @@ export const AuthPage = () => {
   };
 
   const resetForm = (keepSuccess = false) => {
-    setForm({ name: '', email: '', phone: '', staffRole: '', password: '', confirmPassword: '' });
+    setForm({ name: '', email: '', phone: '', staffRole: '', password: '', confirmPassword: '', experience: '', workingHistory: '' });
     setFieldErrors({});
     setGlobalError('');
     if (!keepSuccess) setSuccess('');
@@ -195,23 +201,28 @@ export const AuthPage = () => {
         staffRole: form.staffRole,
       });
 
-      // If this is a staff registration, immediately add them to the staff catalog
+      // If this is a staff registration, submit as a PENDING request for admin approval
       if (selectedRole === 'staff') {
-        await addStaffMember({
+        await submitStaffRequest({
           id: newUser.uid,
           name: form.name,
           email: form.email,
           role: form.staffRole,
-          specialty: form.staffRole, // Using role as default specialty until they edit profile
-          experience: 'New Staff',
-          workingHistory: 'Just joined the team!',
-          rating: 5.0, // Default rating
-          status: 'Available',
-          isLoggedIn: false // Will become true upon login
+          specialty: form.staffRole,
+          experience: form.experience || 'Not specified',
+          workingHistory: form.workingHistory || 'New to the team',
+          phone: form.phone || '',
+          rating: 5.0,
+          status: 'Pending Approval',
+          isLoggedIn: false
         });
       }
 
-      setSuccess('Account created successfully! Please sign in with your credentials.');
+      setSuccess(
+        selectedRole === 'staff'
+          ? 'Registration submitted! Your request has been sent to the admin for approval. You will be able to access the staff portal once approved.'
+          : 'Account created successfully! Please sign in with your credentials.'
+      );
       setMode('login');
       resetForm(true);
     } catch (err) {
@@ -442,6 +453,41 @@ export const AuthPage = () => {
                 <option value="Nail & Pedicure Spa Specialist">Nail & Pedicure Spa Specialist</option>
               </select>
               <FieldError msg={fieldErrors.staffRole} />
+            </div>
+          )}
+
+          {/* Staff Experience — Staff Register */}
+          {mode === 'register' && selectedRole === 'staff' && (
+            <div>
+              <label className="form-label">
+                Years of Experience <span className="text-primary">*</span>
+              </label>
+              <input
+                type="text"
+                className={`form-input mt-1 ${fieldErrors.experience ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                placeholder="e.g. 5 Years in Hair Styling"
+                value={form.experience}
+                onChange={setField('experience')}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+              <FieldError msg={fieldErrors.experience} />
+            </div>
+          )}
+
+          {/* Staff Working History / About — Staff Register */}
+          {mode === 'register' && selectedRole === 'staff' && (
+            <div>
+              <label className="form-label">
+                Working History / About You <span className="text-slate-400 font-normal text-xs ml-1">(optional)</span>
+              </label>
+              <textarea
+                className="form-input mt-1"
+                rows={3}
+                placeholder="Brief description of your past work experience, certifications, or anything the admin should know..."
+                value={form.workingHistory}
+                onChange={setField('workingHistory')}
+                style={{ resize: 'vertical', minHeight: '70px' }}
+              />
             </div>
           )}
 

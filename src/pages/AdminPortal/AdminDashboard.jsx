@@ -3,6 +3,7 @@ import { useSalon } from '../../context/SalonContext';
 import { 
   Home, 
   Users, 
+  User,
   Scissors, 
   BarChart2, 
   HeartHandshake, 
@@ -24,6 +25,7 @@ import {
 import { ManageStaff } from './ManageStaff';
 import { ManageServices } from './ManageServices';
 import { ManageHomeRequests } from './ManageHomeRequests';
+import { ManageCustomers } from './ManageCustomers';
 import { PaymentRecords } from './PaymentRecords';
 import { CustomerFeedback } from './CustomerFeedback';
 
@@ -36,6 +38,7 @@ export const AdminDashboard = () => {
     services, 
     payments, 
     feedback,
+    pendingStaff,
     logoutUser,
     currentUser
   } = useSalon();
@@ -117,6 +120,26 @@ export const AdminDashboard = () => {
           }}
         >
           <Users size={18} /> Staff
+          {pendingStaff.length > 0 && (
+            <span style={{
+              marginLeft: 'auto',
+              minWidth: '22px',
+              height: '22px',
+              borderRadius: '11px',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: '#000',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 6px',
+              boxShadow: '0 0 10px rgba(245, 158, 11, 0.5)',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}>
+              {pendingStaff.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -140,6 +163,29 @@ export const AdminDashboard = () => {
           }}
         >
           <Scissors size={18} /> Services
+        </button>
+
+        <button
+          onClick={() => { setActiveSideNav('customers'); setAdminTab('customers'); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideNav === 'customers' || adminTab === 'customers' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideNav === 'customers' || adminTab === 'customers' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideNav === 'customers' || adminTab === 'customers' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideNav === 'customers' || adminTab === 'customers' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <User size={18} /> Customers
         </button>
 
         <button
@@ -223,6 +269,8 @@ export const AdminDashboard = () => {
           <ManageServices />
         ) : adminTab === 'home-requests' ? (
           <ManageHomeRequests />
+        ) : adminTab === 'customers' ? (
+          <ManageCustomers />
         ) : adminTab === 'payments' ? (
           <PaymentRecords />
         ) : adminTab === 'feedback' ? (
@@ -296,6 +344,11 @@ export const AdminDashboard = () => {
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                       Certified Specialists Available
                     </p>
+                    {pendingStaff.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: '#fbbf24', marginTop: '0.4rem', fontWeight: 600 }}>
+                        ⏳ {pendingStaff.length} pending approval{pendingStaff.length > 1 ? 's' : ''}
+                      </p>
+                    )}
                   </div>
 
                   {/* Stat Card 2: Total Bookings */}

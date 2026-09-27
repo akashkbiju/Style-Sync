@@ -6,7 +6,7 @@ import {
   INITIAL_PAYMENTS, 
   INITIAL_FEEDBACK 
 } from '../data/seedData';
-import { fetchStaffFromDB, addStaffToDB, updateStaffInDB } from '../firebase/staffService';
+import { fetchStaffFromDB, addStaffToDB, updateStaffInDB, deleteStaffFromDB } from '../firebase/staffService';
 import { fetchCollection, addDocument, updateDocument, deleteDocument } from '../firebase/dbService';
 
 const SalonContext = createContext();
@@ -74,6 +74,18 @@ export const SalonProvider = ({ children }) => {
     return INITIAL_STAFF; // Fallback to seed data initially
   });
 
+  // Pending staff requests (awaiting admin approval)
+  const [pendingStaff, setPendingStaff] = useState(() => {
+    const saved = localStorage.getItem('stylesync_pending_staff');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Admin ↔ Staff messaging system
+  const [staffMessages, setStaffMessages] = useState(() => {
+    const saved = localStorage.getItem('stylesync_staff_messages');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [isLoadingStaff, setIsLoadingStaff] = useState(true);
 
   // Fetch real data from Firestore on mount
@@ -132,6 +144,12 @@ export const SalonProvider = ({ children }) => {
           }
         }
 
+        // 6. Pending Staff
+        const dbPending = await fetchCollection('pendingStaff');
+        if (dbPending !== null) {
+          if (dbPending.length > 0) setPendingStaff(dbPending);
+        }
+
       } catch (error) {
         console.error("Failed to load collections from Firestore:", error);
       } finally {
@@ -188,6 +206,14 @@ export const SalonProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('stylesync_feedback', JSON.stringify(feedback));
   }, [feedback]);
+
+  useEffect(() => {
+    localStorage.setItem('stylesync_pending_staff', JSON.stringify(pendingStaff));
+  }, [pendingStaff]);
+
+  useEffect(() => {
+    localStorage.setItem('stylesync_staff_messages', JSON.stringify(staffMessages));
+  }, [staffMessages]);
 
   // Actions & Operations
   const addBooking = async (newBookingData, paymentDetails) => {
@@ -264,6 +290,73 @@ export const SalonProvider = ({ children }) => {
     deleteDocument('services', serviceId).catch(console.error);
   };
 
+  // Submit a new staff registration as a PENDING request (awaiting admin approval)
+  const submitStaffRequest = async (newStaff) => {
+    const pendingEntry = {
+      id: newStaff.id || `pending-${Date.now()}`,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      rating: 5.0,
+      status: 'Pending Approval',
+      homeServiceCertified: true,
+      approvalStatus: 'pending',
+      requestedAt: new Date().toISOString(),
+      ...newStaff
+    };
+    
+    if (!pendingEntry.id) pendingEntry.id = `pending-${Date.now()}`;
+
+    // Add to pending staff list
+    setPendingStaff(prev => [pendingEntry, ...prev]);
+
+    // Save to Firestore pendingStaff collection
+    try {
+      await addDocument('pendingStaff', pendingEntry);
+    } catch(err) {
+      console.warn("Failed to add pending staff request to DB", err);
+    }
+  };
+
+  // Admin approves a pending staff request → move to active staff roster
+  const approvePendingStaff = async (pendingId) => {
+    const pendingMember = pendingStaff.find(p => p.id === pendingId);
+    if (!pendingMember) return;
+
+    const approvedStaff = {
+      ...pendingMember,
+      approvalStatus: 'approved',
+      status: 'Available',
+      approvedAt: new Date().toISOString(),
+    };
+    delete approvedStaff.requestedAt;
+
+    // Add to active staff
+    setStaff(prev => [approvedStaff, ...prev]);
+    try {
+      await addStaffToDB(approvedStaff);
+    } catch(err) {
+      console.warn("Failed to add approved staff to DB", err);
+    }
+
+    // Remove from pending
+    setPendingStaff(prev => prev.filter(p => p.id !== pendingId));
+    try {
+      await deleteDocument('pendingStaff', pendingId);
+    } catch(err) {
+      console.warn("Failed to remove pending staff from DB", err);
+    }
+  };
+
+  // Admin rejects a pending staff request
+  const rejectPendingStaff = async (pendingId) => {
+    setPendingStaff(prev => prev.filter(p => p.id !== pendingId));
+    try {
+      await deleteDocument('pendingStaff', pendingId);
+    } catch(err) {
+      console.warn("Failed to remove rejected staff from DB", err);
+    }
+  };
+
+  // Direct add staff (used by admin "Add New Staff" button — no approval needed)
   const addStaffMember = async (newStaff) => {
     const stf = {
       id: newStaff.id || `stf-${Date.now()}`,
@@ -271,16 +364,14 @@ export const SalonProvider = ({ children }) => {
       rating: 5.0,
       status: 'Available',
       homeServiceCertified: true,
+      approvalStatus: 'approved',
       ...newStaff
     };
     
-    // Ensure id is not undefined if newStaff passed an undefined id
     if (!stf.id) stf.id = `stf-${Date.now()}`;
 
-    // Optimistic UI update so it appears instantly for the user
     setStaff(prev => [stf, ...prev]);
 
-    // Save to Firestore
     try {
       await addStaffToDB(stf);
     } catch(err) {
@@ -311,6 +402,55 @@ export const SalonProvider = ({ children }) => {
     }
   };
 
+  // Remove a staff member from the active roster
+  const removeStaffMember = async (staffId) => {
+    setStaff(prev => prev.filter(s => s.id !== staffId));
+    try {
+      await deleteDocument('staff', staffId);
+    } catch(err) {
+      console.warn('Failed to remove staff from DB', err);
+    }
+  };
+
+  // Update staff level (Junior / Mid-Level / Senior / Lead)
+  const updateStaffLevel = async (staffId, level) => {
+    try {
+      await updateStaffInDB(staffId, { level });
+      setStaff(prev =>
+        prev.map(s => s.id === staffId ? { ...s, level } : s)
+      );
+    } catch(err) {
+      console.error('Failed to update staff level in DB', err);
+    }
+  };
+
+  // Send a message between admin and staff
+  const sendStaffMessage = (staffId, message, senderRole) => {
+    const msg = {
+      id: `msg-${Date.now()}`,
+      text: message,
+      sender: senderRole, // 'admin' or 'staff'
+      senderName: senderRole === 'admin' ? 'Admin' : (currentUser?.name || 'Staff'),
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    setStaffMessages(prev => ({
+      ...prev,
+      [staffId]: [...(prev[staffId] || []), msg]
+    }));
+  };
+
+  // Mark messages as read for a specific staff
+  const markStaffMessagesRead = (staffId, readerRole) => {
+    setStaffMessages(prev => {
+      const msgs = prev[staffId] || [];
+      return {
+        ...prev,
+        [staffId]: msgs.map(m => m.sender !== readerRole ? { ...m, read: true } : m)
+      };
+    });
+  };
+
   const addFeedback = (newFb) => {
     const fb = {
       id: `fb-${Date.now()}`,
@@ -326,34 +466,24 @@ export const SalonProvider = ({ children }) => {
     localStorage.setItem('stylesync_current_user', JSON.stringify(user));
     setCurrentUser(user);
 
-    // If staff logs in, ensure they are registered in the active staff roster & marked as logged in
+    // If staff logs in, check if they are approved or still pending
     if (user.role === 'staff') {
       setActiveRole('staff');
+      
+      // Check if this staff is in the approved/active roster
       setStaff(prev => {
         const exists = prev.some(s => s.name === user.name || s.email === user.email);
         if (exists) {
+          // Already approved — mark as logged in
           return prev.map(s => 
             (s.name === user.name || s.email === user.email)
               ? { ...s, isLoggedIn: true, status: 'Available' }
               : s
           );
-        } else {
-          const newStaffEntry = {
-            id: user.uid || `stf-${Date.now()}`,
-            name: user.name,
-            role: user.staffRole || 'Senior Stylist & Care Specialist',
-            specialty: user.staffRole || 'Hair Styling, Grooming & Senior Home Care',
-            rating: 5.0,
-            experience: 'Certified Specialist',
-            status: 'Available',
-            homeServiceCertified: true,
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-            email: user.email,
-            phone: user.phone || '',
-            isLoggedIn: true
-          };
-          return [newStaffEntry, ...prev];
         }
+        // If they're not in active staff, they might be pending — don't auto-add them
+        // The StaffDashboard will show a "pending approval" screen
+        return prev;
       });
     } else if (user.role === 'admin') {
       setActiveRole('admin');
@@ -393,9 +523,11 @@ export const SalonProvider = ({ children }) => {
       // Data
       services,
       staff,
+      pendingStaff,
       bookings,
       payments,
       feedback,
+      staffMessages,
       // Actions
       addBooking,
       updateBookingStatus,
@@ -403,9 +535,16 @@ export const SalonProvider = ({ children }) => {
       addService,
       deleteService,
       addStaffMember,
+      removeStaffMember,
+      submitStaffRequest,
+      approvePendingStaff,
+      rejectPendingStaff,
       updateStaffStatus,
+      updateStaffLevel,
       updateStaffProfile,
       addFeedback,
+      sendStaffMessage,
+      markStaffMessagesRead,
     }}>
       {children}
     </SalonContext.Provider>

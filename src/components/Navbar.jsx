@@ -32,6 +32,7 @@ export const Navbar = () => {
     adminTab,
     setAdminTab,
     currentUser,
+    pendingStaff,
     logoutUser,
     theme,
     toggleTheme
@@ -84,6 +85,7 @@ export const Navbar = () => {
     { key: 'home-requests', label: 'Home Requests',  icon: <HeartHandshake size={14} /> },
     { key: 'services',      label: 'Services',       icon: <Settings size={14} /> },
     { key: 'staff',         label: 'Staff',          icon: <Users size={14} /> },
+    { key: 'customers',     label: 'Customers',      icon: <User size={14} /> },
     { key: 'payments',      label: 'Payments',       icon: <CreditCard size={14} /> },
     { key: 'feedback',      label: 'Feedback',       icon: <MessageSquare size={14} /> },
   ];
@@ -169,6 +171,11 @@ export const Navbar = () => {
                   }`}
               >
                 {icon}{label}
+                {key === 'staff' && pendingStaff.length > 0 && (
+                  <span className="ml-1 min-w-[18px] h-[18px] rounded-full bg-amber-500 text-black text-[9px] font-extrabold flex items-center justify-center px-1 shadow-[0_0_8px_rgba(245,158,11,0.5)]" style={{ animation: 'pulse 2s ease-in-out infinite' }}>
+                    {pendingStaff.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
