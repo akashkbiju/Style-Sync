@@ -21,7 +21,8 @@ import {
   Menu,
   X,
   PhoneCall,
-  Sparkles
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -77,6 +78,7 @@ export const Navbar = () => {
     { key: 'book-inshop',  label: 'Book Salon',    icon: <Calendar size={14} /> },
     { key: 'book-home',    label: 'Elderly & Home', icon: <HeartHandshake size={14} />, highlight: true },
     { key: 'my-bookings',  label: 'My Bookings',   icon: <LayoutGrid size={14} /> },
+    { key: 'complaints',   label: 'Complaint Box', icon: <AlertTriangle size={14} /> },
   ];
 
   // Admin nav items
@@ -87,7 +89,7 @@ export const Navbar = () => {
     { key: 'staff',         label: 'Staff',          icon: <Users size={14} /> },
     { key: 'customers',     label: 'Customers',      icon: <User size={14} /> },
     { key: 'payments',      label: 'Payments',       icon: <CreditCard size={14} /> },
-    { key: 'feedback',      label: 'Feedback',       icon: <MessageSquare size={14} /> },
+    { key: 'feedback',      label: 'Grievances & Reviews', icon: <MessageSquare size={14} /> },
   ];
 
   const handleNavClick = (tabKey) => {

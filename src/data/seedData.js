@@ -6,3 +6,4 @@ export const INITIAL_STAFF = [];
 export const INITIAL_BOOKINGS = [];
 export const INITIAL_PAYMENTS = [];
 export const INITIAL_FEEDBACK = [];
+export const INITIAL_COMPLAINTS = [];

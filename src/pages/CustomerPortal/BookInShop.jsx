@@ -10,8 +10,9 @@ export const BookInShop = () => {
   const todayDateStr = new Date().toISOString().substring(0, 10);
 
   const [staff, setStaff] = useState(contextStaff);
-  const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
+  const [selectedServiceId, setSelectedServiceId] = useState(services.filter(s => s.status !== 'Pending')[0]?.id || '');
   const [selectedStylistName, setSelectedStylistName] = useState('');
+  const [preferredGender, setPreferredGender] = useState('No Preference');
 
   // Fetch the absolute latest staff from DB whenever the booking page is opened
   useEffect(() => {
@@ -30,13 +31,23 @@ export const BookInShop = () => {
     return () => { isMounted = false; };
   }, []);
 
-  const loggedInStaff = staff.find(s => s.isLoggedIn) || staff[0];
+  const filteredStaff = staff.filter(s => {
+    if (preferredGender === 'No Preference') return true;
+    return s.gender === preferredGender;
+  });
+
+  const loggedInStaff = filteredStaff.find(s => s.isLoggedIn) || filteredStaff[0];
 
   useEffect(() => {
-    if (staff.length > 0 && !selectedStylistName) {
-      setSelectedStylistName(loggedInStaff?.name || staff[0]?.name || '');
+    if (filteredStaff.length > 0) {
+      // Only auto-select if the currently selected stylist is not in the filtered list
+      if (!filteredStaff.some(s => s.name === selectedStylistName)) {
+        setSelectedStylistName(loggedInStaff?.name || filteredStaff[0]?.name || '');
+      }
+    } else {
+      setSelectedStylistName('');
     }
-  }, [staff, loggedInStaff, selectedStylistName]);
+  }, [filteredStaff, loggedInStaff, selectedStylistName]);
 
   const [date, setDate] = useState(() => {
     const today = new Date();
@@ -51,8 +62,8 @@ export const BookInShop = () => {
   const [showRazorpay, setShowRazorpay] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
 
-  const selectedService = services.find(s => s.id === selectedServiceId) || services[0];
-  const selectedStylist = staff.find(stf => stf.name === selectedStylistName) || staff[0];
+  const selectedService = services.find(s => s.id === selectedServiceId) || services.filter(s => s.status !== 'Pending')[0];
+  const selectedStylist = staff.find(stf => stf.name === selectedStylistName);
 
   const handleOpenCheckout = (e) => {
     e.preventDefault();
@@ -136,21 +147,39 @@ export const BookInShop = () => {
 
           {/* Step 2: Select Master Stylist / Specialist */}
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <label className="form-label" style={{ margin: 0 }}>
                 Select Master Stylist / Specialist
               </label>
-              {staff.some(s => s.isLoggedIn) && (
-                <span className="badge badge-confirmed" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                  Staff Active in Salon
-                </span>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <select 
+                  className="form-select" 
+                  style={{ width: 'auto', padding: '0.25rem 2rem 0.25rem 0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', minHeight: 'auto' }}
+                  value={preferredGender}
+                  onChange={(e) => setPreferredGender(e.target.value)}
+                >
+                  <option value="No Preference">Any Gender</option>
+                  <option value="Male">Male Stylist</option>
+                  <option value="Female">Female Stylist</option>
+                </select>
+                {staff.some(s => s.isLoggedIn) && (
+                  <span className="badge badge-confirmed" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    Staff Active in Salon
+                  </span>
+                )}
+              </div>
             </div>
+
+            {filteredStaff.length === 0 && (
+              <div style={{ padding: '1rem', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', borderRadius: '4px', border: '1px solid rgba(244,63,94,0.2)', marginBottom: '1rem' }}>
+                No specialists found matching your preference.
+              </div>
+            )}
 
             {/* Stylist Grid Cards for visual selection */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              {staff.map(stf => {
+              {filteredStaff.map(stf => {
                 const isSelected = selectedStylistName === stf.name;
                 const isOnline = stf.isLoggedIn || (currentUser?.role === 'staff' && currentUser?.name === stf.name);
                 return (
@@ -176,13 +205,24 @@ export const BookInShop = () => {
                       style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: isOnline ? '2px solid #10b981' : '1px solid var(--border-subtle)' }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {stf.name}
                         </span>
                         {isOnline && (
                           <span title="Currently Online & Active" style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block', flexShrink: 0 }}></span>
                         )}
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '0.05rem 0.45rem',
+                          borderRadius: '9999px',
+                          background: stf.level === 'Lead' ? 'rgba(236,72,153,0.15)' : stf.level === 'Senior' ? 'rgba(245,158,11,0.15)' : stf.level === 'Mid-Level' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)',
+                          color: stf.level === 'Lead' ? '#f472b6' : stf.level === 'Senior' ? '#fbbf24' : stf.level === 'Mid-Level' ? '#34d399' : '#60a5fa',
+                          border: `1px solid ${stf.level === 'Lead' ? 'rgba(236,72,153,0.3)' : stf.level === 'Senior' ? 'rgba(245,158,11,0.3)' : stf.level === 'Mid-Level' ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}`
+                        }}>
+                          {stf.level || 'Junior'}
+                        </span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {stf.role}
@@ -200,21 +240,23 @@ export const BookInShop = () => {
             </div>
 
             {/* Fallback Dropdown */}
-            <select 
-              className="form-select" 
-              value={selectedStylistName} 
-              onChange={(e) => setSelectedStylistName(e.target.value)}
-            >
-              {staff.map(stf => {
-                const isOnline = stf.isLoggedIn || (currentUser?.role === 'staff' && currentUser?.name === stf.name);
-                return (
-                  <option key={stf.id} value={stf.name}>
-                    {isOnline ? '🟢 [ONLINE] ' : '👤 '}{stf.name} — {stf.role} (⭐{stf.rating})
-                  </option>
-                );
-              })}
-            </select>
-
+            {filteredStaff.length > 0 && (
+              <select 
+                className="form-select" 
+                value={selectedStylistName} 
+                onChange={(e) => setSelectedStylistName(e.target.value)}
+              >
+                {filteredStaff.map(stf => {
+                  const isOnline = stf.isLoggedIn || (currentUser?.role === 'staff' && currentUser?.name === stf.name);
+                  return (
+                    <option key={stf.id} value={stf.name}>
+                      {isOnline ? '🟢 [ONLINE] ' : '👤 '}{stf.name} — {stf.role} (⭐{stf.rating})
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+            
             {/* Selected Stylist Profile & Reviews Details */}
             {selectedStylist && (
               <div style={{ padding: '1.25rem', marginTop: '1rem', borderRadius: 'var(--radius-sm)', background: 'var(--bg-glass)', border: '1px solid var(--border-subtle)' }}>
@@ -347,7 +389,7 @@ export const BookInShop = () => {
         </form>
       </div>
 
-      {/* Razorpay Simulation Modal */}
+      {/* Razorpay Live Gateway Modal */}
       {showRazorpay && (
         <RazorpayModal
           bookingDetails={{

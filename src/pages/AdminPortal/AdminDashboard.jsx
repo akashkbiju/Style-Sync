@@ -39,9 +39,12 @@ export const AdminDashboard = () => {
     payments, 
     feedback,
     pendingStaff,
+    complaints,
     logoutUser,
     currentUser
   } = useSalon();
+
+  const pendingComplaintsCount = (complaints || []).filter(c => c.status === 'Pending Review').length;
 
   const [activeSideNav, setActiveSideNav] = useState('overview'); // 'overview' | 'staff' | 'services' | 'reports' | 'home-requests'
 
@@ -254,7 +257,26 @@ export const AdminDashboard = () => {
             transition: 'all 0.2s ease'
           }}
         >
-          <MessageSquare size={18} /> Customer Reviews
+          <MessageSquare size={18} /> Grievances & Reviews
+          {pendingComplaintsCount > 0 && (
+            <span style={{
+              marginLeft: 'auto',
+              minWidth: '22px',
+              height: '22px',
+              borderRadius: '11px',
+              background: '#ef4444',
+              color: '#fff',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 6px',
+              boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+            }}>
+              {pendingComplaintsCount}
+            </span>
+          )}
         </button>
 
       </aside>
@@ -293,6 +315,43 @@ export const AdminDashboard = () => {
                 <LogOut size={18} />
               </button>
             </div>
+
+            {/* Pending Complaints Action Banner */}
+            {pendingComplaintsCount > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 15, 22, 0.9))',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderLeft: '4px solid #ef4444',
+                borderRadius: 'var(--radius-sm)',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '1.75rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🚨</span>
+                  <div>
+                    <h4 style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+                      {pendingComplaintsCount} Customer Grievance{pendingComplaintsCount > 1 ? 's' : ''} Require Management Action
+                    </h4>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>
+                      Clients have filed complaints in the Complaint Box. Review and record corrective actions.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setActiveSideNav('reviews'); setAdminTab('feedback'); }}
+                  className="btn-gold"
+                  style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }}
+                >
+                  Review & Take Action
+                </button>
+              </div>
+            )}
 
             {/* Dashboard Grid (Matching Screenshot 4 layout) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '1.5rem' }}>

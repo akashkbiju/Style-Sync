@@ -57,9 +57,12 @@ const runValidations = ({ mode, role, form }) => {
       }
     }
 
-    // ── Staff Role ───────────────────────────────────────────────────────
+    // ── Staff Role & Gender ───────────────────────────────────────────────────────
     if (role === 'staff' && !form.staffRole) {
       errors.staffRole = 'Please select your specialization.';
+    }
+    if (role === 'staff' && !form.gender) {
+      errors.gender = 'Please select your gender.';
     }
 
     // ── Staff Experience ────────────────────────────────────────────────
@@ -113,7 +116,7 @@ export const AuthPage = () => {
   const { loginUser, submitStaffRequest } = useSalon();
 
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', staffRole: '',
+    name: '', email: '', phone: '', staffRole: '', gender: '',
     password: '', confirmPassword: '',
     experience: '', workingHistory: '',
   });
@@ -125,7 +128,7 @@ export const AuthPage = () => {
   };
 
   const resetForm = (keepSuccess = false) => {
-    setForm({ name: '', email: '', phone: '', staffRole: '', password: '', confirmPassword: '', experience: '', workingHistory: '' });
+    setForm({ name: '', email: '', phone: '', staffRole: '', gender: '', password: '', confirmPassword: '', experience: '', workingHistory: '' });
     setFieldErrors({});
     setGlobalError('');
     if (!keepSuccess) setSuccess('');
@@ -199,6 +202,7 @@ export const AuthPage = () => {
         phone:     form.phone,
         role:      selectedRole,
         staffRole: form.staffRole,
+        gender:    form.gender,
       });
 
       // If this is a staff registration, submit as a PENDING request for admin approval
@@ -212,6 +216,7 @@ export const AuthPage = () => {
           experience: form.experience || 'Not specified',
           workingHistory: form.workingHistory || 'New to the team',
           phone: form.phone || '',
+          gender: form.gender || 'Not specified',
           rating: 5.0,
           status: 'Pending Approval',
           isLoggedIn: false
@@ -430,6 +435,25 @@ export const AuthPage = () => {
                   <CheckCircle size={12} /> Valid 10-digit mobile number
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Staff Gender — Staff Register */}
+          {mode === 'register' && selectedRole === 'staff' && (
+            <div>
+              <label className="form-label">
+                Gender <span className="text-primary">*</span>
+              </label>
+              <select
+                className={`form-select mt-1 ${fieldErrors.gender ? 'border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.25)]' : ''}`}
+                value={form.gender}
+                onChange={setField('gender')}
+              >
+                <option value="">-- Select your gender --</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+              <FieldError msg={fieldErrors.gender} />
             </div>
           )}
 

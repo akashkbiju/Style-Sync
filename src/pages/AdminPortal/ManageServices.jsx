@@ -3,7 +3,7 @@ import { useSalon } from '../../context/SalonContext';
 import { Scissors, Plus, Trash2, Clock, HeartHandshake, CheckCircle2, X } from 'lucide-react';
 
 export const ManageServices = () => {
-  const { services, addService, deleteService } = useSalon();
+  const { services, addService, updateServiceStatus, deleteService } = useSalon();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -56,6 +56,7 @@ export const ManageServices = () => {
                 <th style={{ padding: '0.75rem' }}>Price</th>
                 <th style={{ padding: '0.75rem' }}>Duration</th>
                 <th style={{ padding: '0.75rem' }}>Home Service</th>
+                <th style={{ padding: '0.75rem' }}>Status</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Action</th>
               </tr>
             </thead>
@@ -75,14 +76,38 @@ export const ManageServices = () => {
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>In-Shop Only</span>
                     )}
                   </td>
-                  <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                  <td style={{ padding: '0.75rem' }}>
+                    {srv.status === 'Pending' ? (
+                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontSize: '0.75rem' }}>
+                        Proposed
+                      </span>
+                    ) : (
+                      <span className="badge" style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', fontSize: '0.75rem' }}>
+                        Active
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '0.75rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                    {srv.status === 'Pending' && (
+                      <button 
+                        onClick={() => {
+                          if (window.confirm(`Approve service "${srv.title}"?`)) {
+                            updateServiceStatus(srv.id, 'Active');
+                          }
+                        }}
+                        style={{ background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399', padding: '0.3rem 0.6rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                      >
+                        Approve
+                      </button>
+                    )}
                     <button 
                       onClick={() => {
                         if (window.confirm(`Delete service "${srv.title}"?`)) {
                           deleteService(srv.id);
                         }
                       }}
-                      style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer' }}
+                      style={{ background: 'rgba(248, 113, 113, 0.1)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171', padding: '0.3rem 0.6rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      title="Delete Service"
                     >
                       <Trash2 size={16} />
                     </button>

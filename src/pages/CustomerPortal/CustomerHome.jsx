@@ -8,7 +8,8 @@ import {
   Clock, 
   CheckCircle,
   PlusCircle,
-  HeartHandshake
+  HeartHandshake,
+  AlertTriangle
 } from 'lucide-react';
 import { BookInShop } from './BookInShop';
 import { BookHomeService } from './BookHomeService';
@@ -301,6 +302,57 @@ export const CustomerHome = () => {
                 </button>
               </div>
 
+            </div>
+
+            {/* Customer Grievance & Complaint Box Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(15, 15, 22, 0.85))',
+              border: '1px solid rgba(225, 29, 72, 0.35)',
+              borderLeft: '4px solid var(--accent-red)',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.5rem',
+              marginBottom: '3rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1.25rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  background: 'rgba(225, 29, 72, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(225, 29, 72, 0.4)',
+                  flexShrink: 0
+                }}>
+                  <AlertTriangle size={24} style={{ color: 'var(--accent-red)' }} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h4 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                      Customer Grievance & Complaint Box
+                    </h4>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'rgba(225, 29, 72, 0.25)', color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Direct to Owner
+                    </span>
+                  </div>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.3rem 0 0 0', maxWidth: '620px', lineHeight: 1.5 }}>
+                    Unhappy with service quality, staff conduct, salon hygiene, or billing? Report directly to executive management for rapid action.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCustomerTab('complaints')}
+                className="btn-gold"
+                style={{ padding: '0.75rem 1.5rem', fontSize: '0.88rem', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
+              >
+                <AlertTriangle size={15} /> Open Complaint Box
+              </button>
             </div>
 
             {/* Upcoming Appointments List */}
