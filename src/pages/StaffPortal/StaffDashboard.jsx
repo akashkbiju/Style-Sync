@@ -16,11 +16,16 @@ import {
 } from 'lucide-react';
 
 export const StaffDashboard = () => {
-  const { bookings, updateBookingStatus, currentUser, staff } = useSalon();
+  const { bookings, updateBookingStatus, currentUser, staff, addService } = useSalon();
   
-  const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'support'
+  const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'services' | 'support'
   const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState(null);
   const [newStatusValue, setNewStatusValue] = useState('In-Progress');
+
+  const [newServiceTitle, setNewServiceTitle] = useState('');
+  const [newServicePrice, setNewServicePrice] = useState('');
+  const [newServiceCategory, setNewServiceCategory] = useState('Hair');
+  const [newServiceDesc, setNewServiceDesc] = useState('');
 
   // Find staff profile
   const staffProfile = staff.find(s => s.name === currentUser?.name || s.email === currentUser?.email) || {
@@ -126,6 +131,29 @@ export const StaffDashboard = () => {
           }}
         >
           <Users size={18} /> Clients ({uniqueCustomers.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSideTab('services')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideTab === 'services' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideTab === 'services' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideTab === 'services' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideTab === 'services' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Scissors size={18} /> Propose Service
         </button>
 
         <button
@@ -361,6 +389,60 @@ export const StaffDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        ) : activeSideTab === 'services' ? (
+          <div className="neon-panel" style={{ padding: '2rem' }}>
+            <h2 className="font-serif" style={{ fontSize: '1.75rem', color: '#fff', marginBottom: '1rem' }}>
+              Propose New Service
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Add a new service offering to the salon catalog.
+            </p>
+            <div className="form-group">
+              <label className="form-label">Service Title</label>
+              <input type="text" className="form-input" value={newServiceTitle} onChange={e => setNewServiceTitle(e.target.value)} placeholder="e.g. Balayage Highlights" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Price (₹)</label>
+                <input type="number" className="form-input" value={newServicePrice} onChange={e => setNewServicePrice(e.target.value)} placeholder="e.g. 1500" />
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Category</label>
+                <select className="form-select" value={newServiceCategory} onChange={e => setNewServiceCategory(e.target.value)}>
+                  <option>Hair</option>
+                  <option>Grooming</option>
+                  <option>Skincare</option>
+                  <option>Nails</option>
+                  <option>Senior Care</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-textarea" rows={3} value={newServiceDesc} onChange={e => setNewServiceDesc(e.target.value)} placeholder="Short description of the service..." />
+            </div>
+            <button 
+              className="btn-gold" 
+              onClick={() => {
+                if(!newServiceTitle || !newServicePrice) return alert('Title and Price required');
+                addService({
+                  title: newServiceTitle,
+                  price: Number(newServicePrice),
+                  category: newServiceCategory,
+                  description: newServiceDesc,
+                  duration: '45 mins',
+                  image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
+                  homeServiceAvailable: newServiceCategory === 'Senior Care'
+                });
+                setNewServiceTitle('');
+                setNewServicePrice('');
+                setNewServiceDesc('');
+                alert('Service added successfully to the catalog!');
+              }}
+            >
+              Add Service to Catalog
+            </button>
           </div>
         ) : (
           <div className="neon-panel" style={{ padding: '2rem' }}>

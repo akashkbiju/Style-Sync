@@ -5,13 +5,19 @@ import { FeedbackModal } from '../../components/FeedbackModal';
 import { Clock, Calendar, MapPin, Ticket, Star, XCircle, HeartHandshake, Scissors, CheckCircle2 } from 'lucide-react';
 
 export const CustomerBookings = () => {
-  const { bookings, updateBookingStatus } = useSalon();
+  const { bookings, updateBookingStatus, currentUser } = useSalon();
 
   const [selectedBookingForTicket, setSelectedBookingForTicket] = useState(null);
   const [selectedBookingForFeedback, setSelectedBookingForFeedback] = useState(null);
   const [filter, setFilter] = useState('All');
 
-  const filteredBookings = bookings.filter(b => {
+  const myBookings = bookings.filter(b => 
+    b.userId === currentUser?.uid || 
+    b.userEmail === currentUser?.email || 
+    b.customerName === currentUser?.name
+  );
+
+  const filteredBookings = myBookings.filter(b => {
     if (filter === 'All') return true;
     return b.status.toLowerCase() === filter.toLowerCase();
   });
