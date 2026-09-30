@@ -74,6 +74,37 @@ export const TicketModal = ({ booking, onClose }) => {
             </div>
           </div>
 
+          {/* AI Hair Studio Reference Look if attached */}
+          {(booking.hairstyleTitle || booking.hairstyleRef) && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.08), rgba(20, 20, 30, 0.8))',
+              border: '1px solid rgba(225, 29, 72, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.85rem 1rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              {booking.hairstyleRef && (
+                <div style={{ width: '48px', height: '56px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--accent-red)', flexShrink: 0 }}>
+                  <img src={booking.hairstyleRef} alt={booking.hairstyleTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  ✂️ Requested Hairstyle Reference
+                </div>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
+                  {booking.hairstyleTitle} {booking.hairstyleColor ? `(${booking.hairstyleColor})` : ''}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Confirmed digital reference shared with assigned stylist
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Home Service Address details if applicable */}
           {booking.type === 'home-service' && (
             <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem' }}>

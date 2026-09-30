@@ -6,12 +6,26 @@ import { TicketModal } from '../../components/TicketModal';
 import { Calendar, Clock, User, Phone, Scissors, CheckCircle2, Sparkles, Check } from 'lucide-react';
 
 export const BookInShop = () => {
-  const { services, staff: contextStaff, bookings, addBooking, setCustomerTab, currentUser, feedback } = useSalon();
+  const { 
+    services, 
+    staff: contextStaff, 
+    bookings, 
+    addBooking, 
+    setCustomerTab, 
+    currentUser, 
+    feedback,
+    prefilledBookingStyle,
+    setPrefilledBookingStyle 
+  } = useSalon();
   const todayDateStr = new Date().toISOString().substring(0, 10);
 
   const [staff, setStaff] = useState(contextStaff);
-  const [selectedServiceId, setSelectedServiceId] = useState(services.filter(s => s.status !== 'Pending')[0]?.id || '');
-  const [selectedStylistName, setSelectedStylistName] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState(
+    prefilledBookingStyle?.serviceId || services.filter(s => s.status !== 'Pending')[0]?.id || ''
+  );
+  const [selectedStylistName, setSelectedStylistName] = useState(
+    prefilledBookingStyle?.stylistName || ''
+  );
   const [preferredGender, setPreferredGender] = useState('No Preference');
 
   // Fetch the absolute latest staff from DB whenever the booking page is opened
@@ -39,6 +53,10 @@ export const BookInShop = () => {
   const loggedInStaff = filteredStaff.find(s => s.isLoggedIn) || filteredStaff[0];
 
   useEffect(() => {
+    if (prefilledBookingStyle?.stylistName) {
+      setSelectedStylistName(prefilledBookingStyle.stylistName);
+      return;
+    }
     if (filteredStaff.length > 0) {
       // Only auto-select if the currently selected stylist is not in the filtered list
       if (!filteredStaff.some(s => s.name === selectedStylistName)) {
@@ -47,7 +65,7 @@ export const BookInShop = () => {
     } else {
       setSelectedStylistName('');
     }
-  }, [filteredStaff, loggedInStaff, selectedStylistName]);
+  }, [filteredStaff, loggedInStaff, selectedStylistName, prefilledBookingStyle]);
 
   const [date, setDate] = useState(() => {
     const today = new Date();
@@ -57,7 +75,7 @@ export const BookInShop = () => {
   const [time, setTime] = useState('11:00 AM');
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || '');
-  const [specialNotes, setSpecialNotes] = useState('');
+  const [specialNotes, setSpecialNotes] = useState(prefilledBookingStyle?.notes || '');
 
   const [showRazorpay, setShowRazorpay] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
@@ -103,11 +121,15 @@ export const BookInShop = () => {
       address: 'N/A (In-Shop Salon Visit)',
       landmark: '',
       specialNotes,
-      amount: selectedService.price
+      amount: selectedService.price,
+      hairstyleRef: prefilledBookingStyle?.hairstyleRef || null,
+      hairstyleTitle: prefilledBookingStyle?.hairstyleTitle || null,
+      hairstyleColor: prefilledBookingStyle?.hairstyleColor || null
     };
 
     const newBk = await addBooking(bookingData, paymentDetails);
     setCreatedBooking(newBk);
+    if (setPrefilledBookingStyle) setPrefilledBookingStyle(null);
   };
 
   return (
@@ -125,6 +147,68 @@ export const BookInShop = () => {
           Select your desired service, master stylist, and time slot
         </p>
       </div>
+
+      {/* AI Hairstyle Reference Banner if present */}
+      {prefilledBookingStyle && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(20, 20, 30, 0.9))',
+          border: '1.5px solid rgba(225, 29, 72, 0.4)',
+          borderRadius: '16px',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '2rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          boxShadow: '0 0 25px rgba(225, 29, 72, 0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              width: '64px',
+              height: '76px',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              border: '1.5px solid var(--accent-red)',
+              background: '#000',
+              flexShrink: 0
+            }}>
+              <img 
+                src={prefilledBookingStyle.hairstyleRef} 
+                alt={prefilledBookingStyle.hairstyleTitle} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="badge badge-inshop" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
+                  <Sparkles size={11} /> AI Hair Studio Selection
+                </span>
+                {prefilledBookingStyle.hairstyleColor && (
+                  <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600 }}>
+                    Color: {prefilledBookingStyle.hairstyleColor}
+                  </span>
+                )}
+              </div>
+              <h3 style={{ color: '#fff', fontSize: '1.2rem', margin: '0.25rem 0', fontWeight: 700 }}>
+                {prefilledBookingStyle.hairstyleTitle}
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>
+                This reference portrait will be sent to your stylist to replicate accurately.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPrefilledBookingStyle(null)}
+            className="btn-secondary"
+            style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }}
+          >
+            Remove Reference
+          </button>
+        </div>
+      )}
 
       <div className="glass-panel" style={{ padding: '2rem' }}>
         <form onSubmit={handleOpenCheckout}>
@@ -373,7 +457,7 @@ export const BookInShop = () => {
           }}>
             <div>
               <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Estimated Appointment Fee</div>
-              <div style={{ color: 'var(--accent-gold)', fontSize: '1.8rem', fontWeight: 'bold' }}>
+              <div style={{ color: 'var(--accent-red)', fontSize: '1.8rem', fontWeight: 'bold' }}>
                 ₹{selectedService.price}
               </div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
@@ -381,7 +465,7 @@ export const BookInShop = () => {
               </div>
             </div>
 
-            <button type="submit" className="btn-gold" style={{ padding: '0.9rem 2rem', fontSize: '1rem' }}>
+            <button type="submit" className="btn-red-neon" style={{ padding: '0.9rem 2.2rem', fontSize: '1rem' }}>
               <Sparkles size={18} /> Pay ₹{selectedService.price}
             </button>
           </div>

@@ -22,7 +22,8 @@ import {
   X,
   PhoneCall,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Check
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -36,11 +37,28 @@ export const Navbar = () => {
     pendingStaff,
     logoutUser,
     theme,
-    toggleTheme
+    toggleTheme,
+    staffTab,
+    setStaffTab,
+    updateUserProfile
   } = useSalon();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [modalName, setModalName] = useState('');
+  const [modalPhone, setModalPhone] = useState('');
+  const [modalAvatar, setModalAvatar] = useState('');
+  const [modalSuccess, setModalSuccess] = useState(false);
+
+  // Sync modal inputs when opened or currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setModalName(currentUser.name || '');
+      setModalPhone(currentUser.phone || '');
+      setModalAvatar(currentUser.avatar || '');
+    }
+  }, [currentUser, showProfileModal]);
 
   // Close mobile drawer on escape key
   useEffect(() => {
@@ -73,12 +91,13 @@ export const Navbar = () => {
 
   // Customer nav items
   const customerNavItems = [
-    { key: 'home',         label: 'Home',         icon: <Home size={14} /> },
-    { key: 'catalog',      label: 'Services',      icon: <BookOpen size={14} /> },
-    { key: 'book-inshop',  label: 'Book Salon',    icon: <Calendar size={14} /> },
-    { key: 'book-home',    label: 'Elderly & Home', icon: <HeartHandshake size={14} />, highlight: true },
-    { key: 'my-bookings',  label: 'My Bookings',   icon: <LayoutGrid size={14} /> },
-    { key: 'complaints',   label: 'Complaint Box', icon: <AlertTriangle size={14} /> },
+    { key: 'home',           label: 'Home',           icon: <Home size={14} /> },
+    { key: 'ai-hair-studio', label: 'AI Hair Studio', icon: <Sparkles size={14} />, highlight: true },
+    { key: 'catalog',        label: 'Services',        icon: <BookOpen size={14} /> },
+    { key: 'book-inshop',    label: 'Book Salon',      icon: <Calendar size={14} /> },
+    { key: 'book-home',      label: 'Elderly & Home',  icon: <HeartHandshake size={14} /> },
+    { key: 'my-bookings',    label: 'My Bookings',     icon: <LayoutGrid size={14} /> },
+    { key: 'complaints',     label: 'Complaint Box',   icon: <AlertTriangle size={14} /> },
   ];
 
   // Admin nav items
@@ -211,10 +230,14 @@ export const Navbar = () => {
                 }}
               >
                 {/* Role icon avatar */}
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold uppercase text-white
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold uppercase text-white overflow-hidden
                   ${activeRole === 'admin' ? 'bg-rose-600' : activeRole === 'staff' ? 'bg-violet-600' : 'bg-primary'}`}
                 >
-                  {currentUser?.name?.charAt(0) || 'U'}
+                  {currentUser?.avatar ? (
+                    <img src={currentUser.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                    currentUser?.name?.charAt(0) || 'U'
+                  )}
                 </span>
                 <span className="max-w-[100px] truncate">
                   {currentUser?.name?.split(' ')[0] || 'Account'}
@@ -236,10 +259,14 @@ export const Navbar = () => {
                   {/* User info */}
                   <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white uppercase
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white uppercase overflow-hidden shrink-0
                         ${activeRole === 'admin' ? 'bg-rose-600' : activeRole === 'staff' ? 'bg-violet-600' : 'bg-primary'}`}
                       >
-                        {currentUser?.name?.charAt(0) || 'U'}
+                        {currentUser?.avatar ? (
+                          <img src={currentUser.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          currentUser?.name?.charAt(0) || 'U'
+                        )}
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-sm font-bold leading-tight truncate max-w-[150px]" style={{ color: 'var(--text-primary)' }}>
@@ -269,6 +296,23 @@ export const Navbar = () => {
                       ✂️ {currentUser.staffRole}
                     </div>
                   )}
+
+                  {/* Profile Settings */}
+                  <button
+                    onClick={() => {
+                      if (activeRole === 'staff') {
+                        setStaffTab('profile');
+                      } else {
+                        setShowProfileModal(true);
+                      }
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-5 py-3 text-xs uppercase tracking-widest font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 cursor-pointer border-b"
+                    style={{ borderColor: 'var(--border-subtle)' }}
+                  >
+                    <User size={13} className="text-amber-400" />
+                    Profile Settings
+                  </button>
 
                   {/* Sign Out */}
                   <button
@@ -329,10 +373,14 @@ export const Navbar = () => {
         {/* User Card inside Drawer */}
         <div className="p-5 border-b" style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-glass)' }}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white uppercase shrink-0
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white uppercase shrink-0 overflow-hidden
               ${activeRole === 'admin' ? 'bg-rose-600' : activeRole === 'staff' ? 'bg-violet-600' : 'bg-primary'}`}
             >
-              {currentUser?.name?.charAt(0) || 'U'}
+              {currentUser?.avatar ? (
+                <img src={currentUser.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                currentUser?.name?.charAt(0) || 'U'
+              )}
             </div>
             <div className="overflow-hidden flex-1">
               <p className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
@@ -430,6 +478,22 @@ export const Navbar = () => {
             </p>
           </div>
 
+          {/* Profile Settings Button in Drawer */}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              if (activeRole === 'staff') {
+                setStaffTab('profile');
+              } else {
+                setShowProfileModal(true);
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+          >
+            <User size={14} />
+            Profile Settings
+          </button>
+
           {/* Sign Out Button */}
           <button
             onClick={() => {
@@ -448,6 +512,147 @@ export const Navbar = () => {
       {/* Backdrop for Desktop User Menu */}
       {showUserMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+      )}
+
+      {/* ── User Profile Settings Modal (For Customers & Admins) ── */}
+      {showProfileModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowProfileModal(false)}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-xl border shadow-2xl relative"
+            style={{
+              backgroundColor: 'var(--bg-card, #14141d)',
+              borderColor: 'var(--border-strong, rgba(245, 158, 11, 0.3))'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 border-b mb-5" style={{ borderColor: 'var(--border-subtle)' }}>
+              <div className="flex items-center gap-2.5">
+                <User size={20} className="text-amber-400" />
+                <h3 className="font-display text-lg font-bold text-white m-0">Profile Settings</h3>
+              </div>
+              <button 
+                onClick={() => setShowProfileModal(false)}
+                className="p-1 rounded text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await updateUserProfile({
+                name: modalName.trim() || currentUser?.name,
+                phone: modalPhone.trim(),
+                avatar: modalAvatar
+              });
+              setModalSuccess(true);
+              setTimeout(() => {
+                setModalSuccess(false);
+                setShowProfileModal(false);
+              }, 1200);
+            }}>
+              {/* Avatar Selector */}
+              <div className="flex items-center gap-4 mb-5 p-3 rounded-lg bg-white/5 border border-white/10">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400/80 bg-black/40 flex items-center justify-center shrink-0">
+                  {modalAvatar ? (
+                    <img src={modalAvatar} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-bold text-amber-400">
+                      {modalName?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const styles = ['lorelei', 'avataaars', 'personas', 'notionists'];
+                        const s = styles[Math.floor(Math.random() * styles.length)];
+                        const seed = Math.random().toString(36).substring(2, 8);
+                        setModalAvatar(`https://api.dicebear.com/7.x/${s}/svg?seed=${seed}`);
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Sparkles size={12} /> Random Avatar
+                    </button>
+                    {modalAvatar && (
+                      <button
+                        type="button"
+                        onClick={() => setModalAvatar('')}
+                        className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400 m-0">Generate a unique avatar portrait</p>
+                </div>
+              </div>
+
+              {/* Form fields */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={modalName}
+                    onChange={e => setModalName(e.target.value)}
+                    className="form-input w-full"
+                    placeholder="Your Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={modalPhone}
+                    onChange={e => setModalPhone(e.target.value)}
+                    className="form-input w-full"
+                    placeholder="e.g. 9876543210"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser?.email || ''}
+                    className="form-input w-full opacity-60 cursor-not-allowed text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                <button
+                  type="submit"
+                  className="btn-gold flex-1 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Check size={15} /> Save Profile Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded border border-white/20 text-slate-300 hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {modalSuccess && (
+                <div className="mt-3 p-2 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                  <Check size={14} /> Profile updated successfully!
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
       )}
     </>
   );
