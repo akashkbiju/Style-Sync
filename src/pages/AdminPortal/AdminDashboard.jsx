@@ -188,6 +188,29 @@ export const AdminDashboard = () => {
           <HeartHandshake size={18} /> Home Service Requests
         </button>
 
+        <button
+          onClick={() => { setActiveSideNav('reviews'); setAdminTab('feedback'); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideNav === 'reviews' || adminTab === 'feedback' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideNav === 'reviews' || adminTab === 'feedback' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideNav === 'reviews' || adminTab === 'feedback' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideNav === 'reviews' || adminTab === 'feedback' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <MessageSquare size={18} /> Customer Reviews
+        </button>
+
       </aside>
 
       {/* Main Content Area */}

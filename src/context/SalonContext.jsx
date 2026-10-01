@@ -226,11 +226,21 @@ export const SalonProvider = ({ children }) => {
     return newBooking;
   };
 
-  const updateBookingStatus = (bookingId, newStatus) => {
+  const updateBookingStatus = (bookingId, newStatus, newPaymentStatus = null) => {
     setBookings(prev => 
-      prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b)
+      prev.map(b => {
+        if (b.id === bookingId) {
+          const updated = { ...b, status: newStatus };
+          if (newPaymentStatus) updated.paymentStatus = newPaymentStatus;
+          return updated;
+        }
+        return b;
+      })
     );
-    updateDocument('bookings', bookingId, { status: newStatus }).catch(console.error);
+    
+    const updatePayload = { status: newStatus };
+    if (newPaymentStatus) updatePayload.paymentStatus = newPaymentStatus;
+    updateDocument('bookings', bookingId, updatePayload).catch(console.error);
   };
 
   const assignStylistToBooking = (bookingId, stylistName) => {
@@ -280,6 +290,18 @@ export const SalonProvider = ({ children }) => {
       );
     } catch(err) {
       console.error("Failed to update staff status in DB", err);
+    }
+  };
+
+  const updateStaffProfile = async (staffId, profileData) => {
+    try {
+      await updateStaffInDB(staffId, profileData);
+      setStaff(prev => 
+        prev.map(s => s.id === staffId ? { ...s, ...profileData } : s)
+      );
+    } catch(err) {
+      console.error("Failed to update staff profile in DB", err);
+      throw err;
     }
   };
 
@@ -376,6 +398,7 @@ export const SalonProvider = ({ children }) => {
       deleteService,
       addStaffMember,
       updateStaffStatus,
+      updateStaffProfile,
       addFeedback,
     }}>
       {children}

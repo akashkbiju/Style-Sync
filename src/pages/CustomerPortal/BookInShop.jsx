@@ -310,7 +310,7 @@ export const BookInShop = () => {
             </div>
 
             <button type="submit" className="btn-gold" style={{ padding: '0.9rem 2rem', fontSize: '1rem' }}>
-              <Sparkles size={18} /> Confirm & Pay with Razorpay
+              <Sparkles size={18} /> Pay ₹{selectedService.price}
             </button>
           </div>
 
