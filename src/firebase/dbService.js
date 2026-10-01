@@ -11,8 +11,8 @@ export const fetchCollection = async (collectionName) => {
     });
     return list;
   } catch (error) {
-    console.error(`Error fetching ${collectionName} from Firestore:`, error);
-    return [];
+    console.warn(`Firestore not configured or network error fetching ${collectionName}:`, error.message);
+    return null;
   }
 };
 
