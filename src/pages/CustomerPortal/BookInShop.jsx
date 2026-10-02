@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSalon } from '../../context/SalonContext';
 import { RazorpayModal } from '../../components/RazorpayModal';
 import { TicketModal } from '../../components/TicketModal';
@@ -13,6 +13,13 @@ export const BookInShop = () => {
 
   const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
   const [selectedStylistName, setSelectedStylistName] = useState(loggedInStaff?.name || staff[0]?.name || '');
+
+  useEffect(() => {
+    if (staff.length > 0 && !selectedStylistName) {
+      setSelectedStylistName(loggedInStaff?.name || staff[0].name);
+    }
+  }, [staff, loggedInStaff, selectedStylistName]);
+
   const [date, setDate] = useState(() => {
     const today = new Date();
     today.setDate(today.getDate() + 1);

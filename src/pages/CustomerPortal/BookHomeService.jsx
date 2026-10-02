@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSalon } from '../../context/SalonContext';
 import { RazorpayModal } from '../../components/RazorpayModal';
 import { TicketModal } from '../../components/TicketModal';
@@ -46,6 +46,13 @@ export const BookHomeService = () => {
   // Prefer currently active / logged in staff member if present
   const activeStaff = staff.find(s => s.isLoggedIn) || staff[0];
   const [selectedStylistName, setSelectedStylistName] = useState(activeStaff?.name || '');
+
+  useEffect(() => {
+    if (staff.length > 0 && !selectedStylistName) {
+      setSelectedStylistName(staff.find(s => s.isLoggedIn)?.name || staff[0].name);
+    }
+  }, [staff, selectedStylistName]);
+
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
