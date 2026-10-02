@@ -206,8 +206,9 @@ export const HairstylePreview = ({
               alt="New Hairstyle"
               className="absolute inset-0 w-full h-full object-contain"
             />
-            <span className="absolute bottom-4 right-4 z-10 text-[10px] uppercase tracking-widest font-bold bg-primary/90 text-white px-2.5 py-1 rounded-full shadow-lg">
-              After (Virtual Style)
+            <span className="absolute bottom-4 right-4 z-10 text-[10px] uppercase tracking-widest font-bold bg-primary text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+              <Sparkles size={11} />
+              <span>After: {activeStyle?.name || 'Virtual Style'}</span>
             </span>
 
             {/* Foreground: Original Photo (Clipped to Slider Position) */}
@@ -264,8 +265,9 @@ export const HairstylePreview = ({
                 alt="New Look"
                 className="w-full h-full object-contain"
               />
-              <span className="absolute bottom-3 right-3 text-[10px] uppercase tracking-widest font-bold bg-primary text-white px-2.5 py-1 rounded-full shadow">
-                Virtual Styled Look
+              <span className="absolute bottom-3 right-3 text-[10px] uppercase tracking-widest font-bold bg-primary text-white px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                <Sparkles size={10} />
+                <span>{activeStyle?.name || 'Virtual Styled Look'}</span>
               </span>
             </div>
           </div>

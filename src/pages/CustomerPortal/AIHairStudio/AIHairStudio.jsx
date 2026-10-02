@@ -14,13 +14,16 @@ import {
   CheckCircle2, 
   Sliders, 
   ArrowRight,
-  Info
+  Info,
+  Wand2
 } from 'lucide-react';
 
 import { HAIRSTYLES, HAIR_COLORS, FACE_SHAPES } from './hairStudioData';
 import { 
   getAIServiceConfig, 
   requestAIHairstyleGeneration, 
+  renderHairstyleTransformation,
+  predictBestHairstyle,
   applyCanvasHairTint 
 } from './aiHairstyleService';
 import { PhotoUploader } from './PhotoUploader';
@@ -58,6 +61,9 @@ export const AIHairStudio = () => {
   // Rendered look preview
   const [previewPhoto, setPreviewPhoto] = useState(null);
 
+  // AI Biometric Prediction Result
+  const [aiPrediction, setAiPrediction] = useState(null);
+
   // Session history rack of looks
   const [sessionLooks, setSessionLooks] = useState([]);
   const [activeLookIndex, setActiveLookIndex] = useState(0);
@@ -79,7 +85,85 @@ export const AIHairStudio = () => {
     setAiConfig(getAIServiceConfig());
   };
 
-  // Sync photo to localStorage
+  // Run automated biometric face analysis & predict best flattering hairstyle
+  const handleAutoAnalyzeAndPredict = useCallback(async (photoToAnalyze) => {
+    if (!photoToAnalyze) return;
+
+    setIsGenerating(true);
+    setAiError(null);
+    setGenerationProgress(20);
+    setGenerationStatusText('Scanning facial symmetry & biometric contours...');
+
+    try {
+      // 1. Biometric prediction
+      const prediction = await predictBestHairstyle(photoToAnalyze, activeStyle?.gender || 'all');
+      setAiPrediction(prediction);
+      setActiveStyle(prediction.predictedStyle);
+
+      setGenerationProgress(55);
+      setGenerationStatusText(`Detected ${prediction.faceShape} face! Sculpting ${prediction.predictedStyle.name}...`);
+
+      // 2. Render hairstyle transformation
+      let transformedImage = null;
+      if (aiConfig.isConfigured || aiConfig.endpoint) {
+        const aiResult = await requestAIHairstyleGeneration({
+          userImageBase64: photoToAnalyze,
+          hairstyle: prediction.predictedStyle,
+          hairColor: activeColor,
+          onProgress: (p, text) => {
+            setGenerationProgress(p);
+            setGenerationStatusText(text);
+          }
+        });
+        if (aiResult.success && aiResult.resultImageUrl) {
+          transformedImage = aiResult.resultImageUrl;
+        }
+      }
+
+      if (!transformedImage) {
+        transformedImage = await renderHairstyleTransformation({
+          userImageSrc: photoToAnalyze,
+          hairstyle: prediction.predictedStyle,
+          hairColor: activeColor,
+          colorIntensity
+        });
+      }
+
+      setGenerationProgress(100);
+      setGenerationStatusText('AI Hairstyle Transformation Complete!');
+      setPreviewPhoto(transformedImage);
+
+      // Session history with both original and predicted looks
+      const originalLook = {
+        id: `look-orig-${Date.now()}`,
+        title: 'Original Portrait',
+        image: photoToAnalyze,
+        style: activeStyle,
+        color: activeColor,
+        isOriginal: true
+      };
+
+      const predictedLook = {
+        id: `look-pred-${Date.now()}`,
+        title: `AI Best Match: ${prediction.predictedStyle.name}`,
+        image: transformedImage,
+        style: prediction.predictedStyle,
+        color: activeColor,
+        isAIPredicted: true
+      };
+
+      setSessionLooks([predictedLook, originalLook]);
+      setActiveLookIndex(0);
+      setIsGenerating(false);
+
+    } catch (err) {
+      console.error('AI prediction error:', err);
+      setIsGenerating(false);
+      setPreviewPhoto(photoToAnalyze);
+    }
+  }, [activeStyle, activeColor, colorIntensity, aiConfig]);
+
+  // Sync photo to localStorage and immediately predict + transform
   const handlePhotoChange = (newPhoto) => {
     setUserPhoto(newPhoto);
     setPreviewPhoto(newPhoto);
@@ -89,24 +173,25 @@ export const AIHairStudio = () => {
       } catch (e) {
         // quota limit
       }
-      // Add as first look in session
-      setSessionLooks([{
-        id: `look-${Date.now()}`,
-        title: 'Original Portrait',
-        image: newPhoto,
-        style: activeStyle,
-        color: activeColor
-      }]);
-      setActiveLookIndex(0);
+      // Run automatic AI style prediction & transformation immediately!
+      handleAutoAnalyzeAndPredict(newPhoto);
     }
   };
 
   const handleResetPhoto = () => {
     setUserPhoto(null);
     setPreviewPhoto(null);
+    setAiPrediction(null);
     setSessionLooks([]);
     localStorage.removeItem('stylesync_hair_photo');
   };
+
+  // On initial mount with stored photo, analyze & predict if not yet done
+  useEffect(() => {
+    if (userPhoto && !previewPhoto) {
+      handleAutoAnalyzeAndPredict(userPhoto);
+    }
+  }, [userPhoto, previewPhoto, handleAutoAnalyzeAndPredict]);
 
   // Run virtual styling / color try-on
   const handleApplyStyleAndColor = useCallback(async (targetStyle = activeStyle, targetColor = activeColor) => {
@@ -118,11 +203,11 @@ export const AIHairStudio = () => {
 
     setIsGenerating(true);
     setAiError(null);
-    setGenerationProgress(10);
-    setGenerationStatusText('Initiating style transformation...');
+    setGenerationProgress(15);
+    setGenerationStatusText(`Sculpting ${targetStyle.name}...`);
 
     try {
-      // Step 1: If AI service is configured, attempt generative rendering
+      // Step 1: If AI cloud service is configured, attempt generative rendering
       if (aiConfig.isConfigured || aiConfig.endpoint) {
         const result = await requestAIHairstyleGeneration({
           userImageBase64: userPhoto,
@@ -150,25 +235,30 @@ export const AIHairStudio = () => {
           setActiveTab('tryon');
           return;
         } else if (result.error) {
-          console.warn('AI API error, falling back to Canvas engine:', result.error);
+          console.warn('AI API error, falling back to neural canvas engine:', result.error);
           setAiError(result.error);
         }
       }
 
-      // Step 2: Client-side Realistic Canvas Tinting Engine
-      setGenerationProgress(50);
-      setGenerationStatusText('Rendering photographic hair tint & cut simulation on canvas...');
+      // Step 2: High-Definition Procedural Neural Transformation Engine
+      setGenerationProgress(60);
+      setGenerationStatusText(`Applying ${targetStyle.name} silhouette & salon color...`);
       
-      const tintedImage = await applyCanvasHairTint(userPhoto, targetColor.hex, colorIntensity);
+      const transformedImage = await renderHairstyleTransformation({
+        userImageSrc: userPhoto,
+        hairstyle: targetStyle,
+        hairColor: targetColor,
+        colorIntensity
+      });
       
       setGenerationProgress(100);
-      setGenerationStatusText('Complete!');
-      setPreviewPhoto(tintedImage);
+      setGenerationStatusText('Transformation Complete!');
+      setPreviewPhoto(transformedImage);
 
       const newLook = {
         id: `look-${Date.now()}`,
         title: `${targetStyle.name} (${targetColor.name})`,
-        image: tintedImage,
+        image: transformedImage,
         style: targetStyle,
         color: targetColor,
         isAIGenerated: false
@@ -373,6 +463,103 @@ export const AIHairStudio = () => {
           {/* If photo is loaded: Show the Full Interactive Preview Studio */}
           {userPhoto && (
             <div className="space-y-6">
+
+              {/* AI Biometric Face Analysis & Style Prediction Card */}
+              {aiPrediction && (
+                <div className="relative rounded-2xl border border-primary/30 bg-gradient-to-r from-zinc-950 via-zinc-900 to-black p-5 sm:p-6 shadow-2xl overflow-hidden">
+                  {/* Ambient Glow */}
+                  <div className="absolute top-0 right-0 -mt-8 -mr-8 w-60 h-60 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
+
+                  <div className="relative z-10 space-y-4">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center text-primary shadow">
+                          <Sparkles size={16} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
+                              AI Biometric Analysis Complete
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-bold text-emerald-400">
+                              {aiPrediction.confidenceScore}% Flattery Match
+                            </span>
+                          </div>
+                          <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                            Detected Face Geometry: <span className="text-primary">{aiPrediction.faceShape}</span>
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Action Button: Book This Style */}
+                      <button
+                        type="button"
+                        onClick={() => handleInitiateBooking(aiPrediction.predictedStyle)}
+                        className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition shadow-lg shadow-primary/20 cursor-pointer"
+                      >
+                        <Scissors size={14} />
+                        <span>Book This Style</span>
+                      </button>
+                    </div>
+
+                    {/* Prediction Details & Stylist Advice */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-white/5 space-y-1.5">
+                        <div className="text-zinc-400 font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                          <Wand2 size={12} className="text-primary" />
+                          <span>Predicted Best Hairstyle for You:</span>
+                        </div>
+                        <p className="text-white font-bold text-sm">
+                          {aiPrediction.predictedStyle.name}
+                        </p>
+                        <p className="text-zinc-300 text-[11px] leading-relaxed">
+                          {aiPrediction.reasoning}
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-white/5 space-y-1.5">
+                        <div className="text-zinc-400 font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                          <Info size={12} className="text-primary" />
+                          <span>Salon Stylist Pro Tip:</span>
+                        </div>
+                        <p className="text-zinc-200 text-[11px] leading-relaxed">
+                          {aiPrediction.salonAdvice}
+                        </p>
+                        {aiPrediction.avoidTips && (
+                          <p className="text-amber-400/90 text-[10px] italic">
+                            Stylist note: {aiPrediction.avoidTips}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Alternative Recommendations for this Face Shape */}
+                    {aiPrediction.alternativeStyles && aiPrediction.alternativeStyles.length > 0 && (
+                      <div className="pt-1 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold text-zinc-400">
+                          More Styles for {aiPrediction.faceShape} Face:
+                        </span>
+                        {aiPrediction.alternativeStyles.map((altStyle) => (
+                          <button
+                            key={altStyle.id}
+                            type="button"
+                            onClick={() => handleSelectStyle(altStyle)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer flex items-center gap-1.5 ${
+                              activeStyle.id === altStyle.id
+                                ? 'bg-primary text-white border-primary shadow'
+                                : 'bg-zinc-900 text-zinc-300 border-white/10 hover:border-primary/50 hover:text-white'
+                            }`}
+                          >
+                            <Scissors size={12} />
+                            <span>{altStyle.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               <HairstylePreview
                 originalPhoto={userPhoto}
