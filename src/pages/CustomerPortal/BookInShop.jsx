@@ -6,7 +6,7 @@ import { TicketModal } from '../../components/TicketModal';
 import { Calendar, Clock, User, Phone, Scissors, CheckCircle2, Sparkles, Check } from 'lucide-react';
 
 export const BookInShop = () => {
-  const { services, staff: contextStaff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
+  const { services, staff: contextStaff, bookings, addBooking, setCustomerTab, currentUser, feedback } = useSalon();
   const todayDateStr = new Date().toISOString().substring(0, 10);
 
   const [staff, setStaff] = useState(contextStaff);
@@ -224,22 +224,27 @@ export const BookInShop = () => {
                     <strong style={{ color: 'var(--text-primary)' }}>Working History & Experience:</strong> {selectedStylist.workingHistory}
                   </div>
                 )}
-                {selectedStylist.reviews && selectedStylist.reviews.length > 0 && (
-                  <div>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Recent Customer Reviews:</strong>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
-                      {selectedStylist.reviews.map((rev, idx) => (
-                        <div key={idx} style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>{rev.user}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)' }}>{'⭐'.repeat(rev.rating)}</span>
+                
+                {(() => {
+                  const recentReviews = feedback ? feedback.filter(f => f.stylistName === selectedStylist.name).slice(0, 3) : [];
+                  if (recentReviews.length === 0) return null;
+                  return (
+                    <div>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Recent Customer Reviews:</strong>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
+                        {recentReviews.map((rev, idx) => (
+                          <div key={idx} style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>{rev.customerName}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)' }}>{'⭐'.repeat(rev.rating)}</span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>"{rev.comment}"</div>
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>"{rev.comment}"</div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
           </div>
