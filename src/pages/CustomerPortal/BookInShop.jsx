@@ -1,22 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useSalon } from '../../context/SalonContext';
+import { fetchStaffFromDB } from '../../firebase/staffService';
 import { RazorpayModal } from '../../components/RazorpayModal';
 import { TicketModal } from '../../components/TicketModal';
 import { Calendar, Clock, User, Phone, Scissors, CheckCircle2, Sparkles, Check } from 'lucide-react';
 
 export const BookInShop = () => {
-  const { services, staff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
+  const { services, staff: contextStaff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
   const todayDateStr = new Date().toISOString().substring(0, 10);
 
-  // Find if any staff is actively logged in
-  const loggedInStaff = staff.find(s => s.isLoggedIn) || staff[0];
-
+  const [staff, setStaff] = useState(contextStaff);
   const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
-  const [selectedStylistName, setSelectedStylistName] = useState(loggedInStaff?.name || staff[0]?.name || '');
+  const [selectedStylistName, setSelectedStylistName] = useState('');
+
+  // Fetch the absolute latest staff from DB whenever the booking page is opened
+  useEffect(() => {
+    let isMounted = true;
+    const loadLatestStaff = async () => {
+      try {
+        const latestStaff = await fetchStaffFromDB();
+        if (isMounted && latestStaff && latestStaff.length > 0) {
+          setStaff(latestStaff);
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest staff", err);
+      }
+    };
+    loadLatestStaff();
+    return () => { isMounted = false; };
+  }, []);
+
+  const loggedInStaff = staff.find(s => s.isLoggedIn) || staff[0];
 
   useEffect(() => {
     if (staff.length > 0 && !selectedStylistName) {
-      setSelectedStylistName(loggedInStaff?.name || staff[0].name);
+      setSelectedStylistName(loggedInStaff?.name || staff[0]?.name || '');
     }
   }, [staff, loggedInStaff, selectedStylistName]);
 

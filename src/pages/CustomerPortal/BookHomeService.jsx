@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSalon } from '../../context/SalonContext';
+import { fetchStaffFromDB } from '../../firebase/staffService';
 import { RazorpayModal } from '../../components/RazorpayModal';
 import { TicketModal } from '../../components/TicketModal';
 import { 
@@ -23,8 +24,27 @@ import {
 } from 'lucide-react';
 
 export const BookHomeService = () => {
-  const { services, staff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
+  const { services, staff: contextStaff, bookings, addBooking, setCustomerTab, currentUser } = useSalon();
   const todayDateStr = new Date().toISOString().substring(0, 10);
+
+  const [staff, setStaff] = useState(contextStaff);
+
+  // Fetch the absolute latest staff from DB whenever the booking page is opened
+  useEffect(() => {
+    let isMounted = true;
+    const loadLatestStaff = async () => {
+      try {
+        const latestStaff = await fetchStaffFromDB();
+        if (isMounted && latestStaff && latestStaff.length > 0) {
+          setStaff(latestStaff);
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest staff", err);
+      }
+    };
+    loadLatestStaff();
+    return () => { isMounted = false; };
+  }, []);
 
   // All home services
   const homeServices = services.filter(s => s.homeServiceAvailable);
@@ -45,11 +65,11 @@ export const BookHomeService = () => {
   
   // Prefer currently active / logged in staff member if present
   const activeStaff = staff.find(s => s.isLoggedIn) || staff[0];
-  const [selectedStylistName, setSelectedStylistName] = useState(activeStaff?.name || '');
+  const [selectedStylistName, setSelectedStylistName] = useState('');
 
   useEffect(() => {
     if (staff.length > 0 && !selectedStylistName) {
-      setSelectedStylistName(staff.find(s => s.isLoggedIn)?.name || staff[0].name);
+      setSelectedStylistName(staff.find(s => s.isLoggedIn)?.name || staff[0]?.name || '');
     }
   }, [staff, selectedStylistName]);
 
