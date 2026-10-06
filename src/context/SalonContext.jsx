@@ -12,17 +12,33 @@ import { fetchCollection, addDocument, updateDocument, deleteDocument } from '..
 
 const SalonContext = createContext();
 
+// Crash-proof JSON parser for localStorage
+const safeJsonParse = (key, fallback = null) => {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val || val === 'undefined' || val === 'null') return fallback;
+    return JSON.parse(val);
+  } catch (e) {
+    return fallback;
+  }
+};
+
 export const SalonProvider = ({ children }) => {
   // Theme state: 'dark' | 'light'
   const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('stylesync_theme');
-    return savedTheme || 'dark';
+    try {
+      return localStorage.getItem('stylesync_theme') || 'dark';
+    } catch (e) {
+      return 'dark';
+    }
   });
 
   // Apply theme to root html element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('stylesync_theme', theme);
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('stylesync_theme', theme);
+    } catch (e) {}
   }, [theme]);
 
   const toggleTheme = () => {
@@ -31,19 +47,14 @@ export const SalonProvider = ({ children }) => {
 
   // Auth state
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('stylesync_current_user');
-    return saved ? JSON.parse(saved) : null;
+    return safeJsonParse('stylesync_current_user', null);
   });
   const isAuthenticated = !!currentUser;
 
   // Active module role — locked to logged-in user's role, never manually switchable
   const [activeRole, setActiveRole] = useState(() => {
-    const saved = localStorage.getItem('stylesync_current_user');
-    if (saved) {
-      const user = JSON.parse(saved);
-      return user.role || 'customer';
-    }
-    return 'customer';
+    const user = safeJsonParse('stylesync_current_user', null);
+    return user?.role || 'customer';
   });
 
   // Customer sub-tab: 'landing' | 'home' | 'catalog' | 'book-inshop' | 'book-home' | 'my-bookings'
@@ -57,10 +68,8 @@ export const SalonProvider = ({ children }) => {
 
   // Persistent State Loaders with smart merging for new seed items
   const [services, setServices] = useState(() => {
-    const saved = localStorage.getItem('stylesync_services');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge any new seed services that don't exist in local storage
+    const parsed = safeJsonParse('stylesync_services', null);
+    if (parsed && Array.isArray(parsed)) {
       const existingIds = new Set(parsed.map(s => s.id));
       const newItems = INITIAL_SERVICES.filter(s => !existingIds.has(s.id));
       return [...parsed, ...newItems];
@@ -72,22 +81,17 @@ export const SalonProvider = ({ children }) => {
   const LEGACY_FAKE_NAMES = new Set(['Alexander Wright', 'Sophia Chen', 'Marcus Vance', 'Elena Rostova']);
 
   const [staff, setStaff] = useState(() => {
-    // Initial optimistic load from localStorage for fast UI
-    const saved = localStorage.getItem('stylesync_staff');
-    if (saved) return JSON.parse(saved);
-    return INITIAL_STAFF; // Fallback to seed data initially
+    return safeJsonParse('stylesync_staff', INITIAL_STAFF);
   });
 
   // Pending staff requests (awaiting admin approval)
   const [pendingStaff, setPendingStaff] = useState(() => {
-    const saved = localStorage.getItem('stylesync_pending_staff');
-    return saved ? JSON.parse(saved) : [];
+    return safeJsonParse('stylesync_pending_staff', []);
   });
 
   // Admin ↔ Staff messaging system
   const [staffMessages, setStaffMessages] = useState(() => {
-    const saved = localStorage.getItem('stylesync_staff_messages');
-    return saved ? JSON.parse(saved) : {};
+    return safeJsonParse('stylesync_staff_messages', {});
   });
 
   const [isLoadingStaff, setIsLoadingStaff] = useState(true);
@@ -183,99 +187,90 @@ export const SalonProvider = ({ children }) => {
   }, []);
 
   const [bookings, setBookings] = useState(() => {
-    const saved = localStorage.getItem('stylesync_bookings');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Remove any bookings with legacy fake staff
-      const cleaned = parsed.map(b => {
+    const parsed = safeJsonParse('stylesync_bookings', null);
+    if (parsed && Array.isArray(parsed)) {
+      return parsed.map(b => {
         if (b.stylistName === 'Sophia Chen' || b.stylistName === 'Alexander Wright') {
           return { ...b, stylistName: 'Akash K Biju' };
         }
         return b;
       });
-      return cleaned;
     }
     return INITIAL_BOOKINGS;
   });
 
   const [payments, setPayments] = useState(() => {
-    const saved = localStorage.getItem('stylesync_payments');
-    return saved ? JSON.parse(saved) : INITIAL_PAYMENTS;
+    return safeJsonParse('stylesync_payments', INITIAL_PAYMENTS);
   });
 
   const [feedback, setFeedback] = useState(() => {
-    const saved = localStorage.getItem('stylesync_feedback');
-    return saved ? JSON.parse(saved) : INITIAL_FEEDBACK;
+    return safeJsonParse('stylesync_feedback', INITIAL_FEEDBACK);
   });
 
   // Staff Attendance State
   const [staffAttendance, setStaffAttendance] = useState(() => {
-    const saved = localStorage.getItem('stylesync_staff_attendance');
-    return saved ? JSON.parse(saved) : [];
+    return safeJsonParse('stylesync_staff_attendance', []);
   });
 
   // Staff Leave Requests State
   const [leaveRequests, setLeaveRequests] = useState(() => {
-    const saved = localStorage.getItem('stylesync_leave_requests');
-    return saved ? JSON.parse(saved) : [];
+    return safeJsonParse('stylesync_leave_requests', []);
   });
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem('stylesync_services', JSON.stringify(services));
+    try { localStorage.setItem('stylesync_services', JSON.stringify(services)); } catch(e) {}
   }, [services]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_staff', JSON.stringify(staff));
+    try { localStorage.setItem('stylesync_staff', JSON.stringify(staff)); } catch(e) {}
   }, [staff]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_bookings', JSON.stringify(bookings));
+    try { localStorage.setItem('stylesync_bookings', JSON.stringify(bookings)); } catch(e) {}
   }, [bookings]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_payments', JSON.stringify(payments));
+    try { localStorage.setItem('stylesync_payments', JSON.stringify(payments)); } catch(e) {}
   }, [payments]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_feedback', JSON.stringify(feedback));
+    try { localStorage.setItem('stylesync_feedback', JSON.stringify(feedback)); } catch(e) {}
   }, [feedback]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_pending_staff', JSON.stringify(pendingStaff));
+    try { localStorage.setItem('stylesync_pending_staff', JSON.stringify(pendingStaff)); } catch(e) {}
   }, [pendingStaff]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_staff_messages', JSON.stringify(staffMessages));
+    try { localStorage.setItem('stylesync_staff_messages', JSON.stringify(staffMessages)); } catch(e) {}
   }, [staffMessages]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_staff_attendance', JSON.stringify(staffAttendance));
+    try { localStorage.setItem('stylesync_staff_attendance', JSON.stringify(staffAttendance)); } catch(e) {}
   }, [staffAttendance]);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_leave_requests', JSON.stringify(leaveRequests));
+    try { localStorage.setItem('stylesync_leave_requests', JSON.stringify(leaveRequests)); } catch(e) {}
   }, [leaveRequests]);
 
   const [complaints, setComplaints] = useState(() => {
-    const saved = localStorage.getItem('stylesync_complaints');
-    return saved ? JSON.parse(saved) : INITIAL_COMPLAINTS;
+    return safeJsonParse('stylesync_complaints', INITIAL_COMPLAINTS);
   });
 
   useEffect(() => {
-    localStorage.setItem('stylesync_complaints', JSON.stringify(complaints));
+    try { localStorage.setItem('stylesync_complaints', JSON.stringify(complaints)); } catch(e) {}
   }, [complaints]);
 
   // Customer AI Hair Studio Favorites
   const [hairFavorites, setHairFavorites] = useState(() => {
-    const saved = localStorage.getItem('stylesync_hair_favorites');
-    return saved ? JSON.parse(saved) : [];
+    return safeJsonParse('stylesync_hair_favorites', []);
   });
 
   const [prefilledBookingStyle, setPrefilledBookingStyle] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('stylesync_hair_favorites', JSON.stringify(hairFavorites));
+    try { localStorage.setItem('stylesync_hair_favorites', JSON.stringify(hairFavorites)); } catch(e) {}
   }, [hairFavorites]);
 
   const addHairFavorite = async (favoriteItem) => {
