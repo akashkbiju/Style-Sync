@@ -1,5 +1,4 @@
-// StyleSync AI Hairstyle Service & Integration Layer
-// Advanced Biometric Style Predictor & Neural Canvas Hairstyle Transformation Engine
+import { fal } from '@fal-ai/client';
 import { HAIRSTYLES, FACE_SHAPES, HAIR_COLORS } from './hairStudioData';
 
 const STORAGE_KEY = 'stylesync_ai_hair_config';
@@ -20,25 +19,25 @@ export const getAIServiceConfig = () => {
 
   const envKey = 
     import.meta.env.VITE_AI_HAIRSTYLE_API_KEY || 
-    import.meta.env.VITE_GEMINI_API_KEY || 
     import.meta.env.VITE_FAL_KEY || 
     import.meta.env.VITE_REPLICATE_API_TOKEN || 
+    import.meta.env.VITE_GEMINI_API_KEY || 
     '';
     
   const envProvider = 
     import.meta.env.VITE_AI_HAIRSTYLE_PROVIDER || 
     (import.meta.env.VITE_FAL_KEY ? 'fal' : 
      import.meta.env.VITE_REPLICATE_API_TOKEN ? 'replicate' : 
-     import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : 'pollinations');
+     import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : 'local-photo');
 
   const envEndpoint = import.meta.env.VITE_AI_HAIRSTYLE_ENDPOINT || '';
 
   return {
-    isConfigured: true, // Always ready with Pollinations Free Flux AI + Real Photographic Engine!
+    isConfigured: Boolean(envKey),
     apiKey: envKey,
-    provider: envKey ? envProvider : 'pollinations',
+    provider: envKey ? envProvider : 'local-photo',
     endpoint: envEndpoint,
-    backendMode: envKey ? 'direct' : 'pollinations-free',
+    backendMode: envKey ? 'cloud-ai' : 'photographic-grafting',
   };
 };
 
@@ -193,35 +192,48 @@ export const requestAIHairstyleGeneration = async ({
       return { success: true, isConfigured: true, resultImageUrl: `data:image/jpeg;base64,${b64}` };
     }
 
-    // 2. Fal.ai (if API key provided)
+    // 2. Fal.ai (Recommended: Dedicated Hair Editing)
     if (config.apiKey && config.provider === 'fal') {
-      onProgress(35, 'Connecting to Fal.ai model...');
-      const response = await fetch('https://queue.fal.run/fal-ai/flux-subject', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${config.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt,
-          image_url: userImageBase64,
-          negative_prompt: 'deformed face, blurry, bad anatomy, artificial sticker hair, unnatural colors',
-          num_images: 1,
-          sync_mode: true
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Fal.ai API error (${response.status})`);
+      onProgress(35, 'Connecting to Fal.ai Hair Transformation Model...');
+      fal.config({ credentials: config.apiKey });
+      
+      onProgress(50, 'Analyzing face and applying hairstyle inpainting...');
+      try {
+        const result = await fal.subscribe('fal-ai/image-editing/hair-change', {
+          input: {
+            image_url: userImageBase64,
+            hair_style_prompt: `${hairstyle.name}, ${hairstyle.description}`,
+            hair_color: hairColor && hairColor.name !== 'Natural / Match Mine' ? hairColor.name : 'natural'
+          },
+          logs: false,
+          onQueueUpdate: (update) => {
+            if (update.status === 'IN_PROGRESS') {
+              onProgress(75, 'Neural Inpainting hair on your photo...');
+            }
+          }
+        });
+        
+        const resultImageUrl = result.data?.images?.[0]?.url || result.data?.image?.url;
+        if (resultImageUrl) {
+          return { success: true, isConfigured: true, resultImageUrl };
+        }
+      } catch (falErr) {
+        console.warn('Fal hair-change error, attempting flux-subject fallback:', falErr);
+        const fallbackRes = await fal.subscribe('fal-ai/flux-subject', {
+          input: {
+            image_url: userImageBase64,
+            prompt: `high quality salon portrait of the person with ${hairstyle.name} hairstyle. ${colorDesc} Keep identical face and lighting.`,
+          }
+        });
+        const fallbackUrl = fallbackRes.data?.images?.[0]?.url;
+        if (fallbackUrl) {
+          return { success: true, isConfigured: true, resultImageUrl: fallbackUrl };
+        }
+        throw falErr;
       }
-
-      const data = await response.json();
-      const resultImageUrl = data.images?.[0]?.url || data.image?.url;
-      return { success: true, isConfigured: true, resultImageUrl };
     }
 
-    // 3. Replicate (if API key provided)
+    // 3. Replicate (HairFastGAN / Inpainting)
     if (config.apiKey && config.provider === 'replicate') {
       onProgress(35, 'Submitting job to Replicate...');
       const response = await fetch('https://api.replicate.com/v1/predictions', {
@@ -231,8 +243,11 @@ export const requestAIHairstyleGeneration = async ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          version: 'latest',
-          input: { image: userImageBase64, prompt }
+          version: 'zsxkib/hair-fast-gan',
+          input: { 
+            face_image: userImageBase64,
+            shape_image: hairstyle.image || hairstyle.previewImage
+          }
         })
       });
 
@@ -246,33 +261,28 @@ export const requestAIHairstyleGeneration = async ({
       return { success: true, isConfigured: true, resultImageUrl };
     }
 
-    // 4. Free Photorealistic Flux AI Engine (Zero API Key Required)
-    onProgress(35, 'Contacting AI Neural Engine (Flux Photorealistic Model)...');
-    const genderTerm = hairstyle.gender === 'girl' ? 'young stylish woman' : 'young handsome man';
-    const pollPrompt = `masterpiece photorealistic 8k salon portrait photography of a ${genderTerm} with ${hairstyle.name} haircut, ${hairstyle.description}. ${colorDesc} professional studio lighting, depth of field, sharp focus, award-winning photography.`;
-    const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(pollPrompt)}?width=768&height=768&model=flux&nologo=true`;
-
-    onProgress(70, 'Rendering high-definition hairstyle transformation...');
-    const res = await fetch(pollUrl);
-    if (!res.ok) throw new Error(`Flux AI status: ${res.status}`);
-
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve({ success: true, isConfigured: true, resultImageUrl: reader.result });
-      };
-      reader.onerror = () => {
-        resolve({ success: false, error: 'Failed to encode AI image' });
-      };
-      reader.readAsDataURL(blob);
+    // 4. Local High-Definition Photographic Grafting (Preserves 100% of User's Real Face with Zero Artificial Replacements)
+    onProgress(50, 'Sculpting & blending photographic haircut onto your portrait...');
+    const resultImageUrl = await renderHairstyleTransformation({
+      userImageSrc: userImageBase64,
+      hairstyle,
+      hairColor
     });
+    return { success: true, isConfigured: false, resultImageUrl };
 
   } catch (err) {
+    console.error('AI Hairstyle Generation Error:', err);
+    // Fallback to local photographic face blend if cloud service fails
+    const fallbackImage = await renderHairstyleTransformation({
+      userImageSrc: userImageBase64,
+      hairstyle,
+      hairColor
+    });
     return {
-      success: false,
-      isConfigured: true,
-      error: err.message || 'AI service error'
+      success: true,
+      isConfigured: false,
+      resultImageUrl: fallbackImage,
+      error: err.message
     };
   }
 };
