@@ -15,7 +15,7 @@ import { BookInShop } from './pages/CustomerPortal/BookInShop';
 import { BookHomeService } from './pages/CustomerPortal/BookHomeService';
 import { CustomerBookings } from './pages/CustomerPortal/CustomerBookings';
 import { ComplaintBox } from './pages/CustomerPortal/ComplaintBox';
-import { AIHairStudio } from './pages/CustomerPortal/AIHairStudio/AIHairStudio';
+import { AIBeautyStudio } from './pages/CustomerPortal/AIBeautyStudio/AIBeautyStudio';
 
 // Staff Pages
 import { StaffDashboard } from './pages/StaffPortal/StaffDashboard';
@@ -46,7 +46,7 @@ const MainContent = () => {
           {customerTab === 'landing' && <LandingPage />}
           {customerTab === 'home' && <CustomerHome />}
           {customerTab === 'catalog' && <ServiceCatalog />}
-          {customerTab === 'ai-hair-studio' && <AIHairStudio />}
+          {(customerTab === 'ai-beauty-studio' || customerTab === 'ai-hair-studio') && <AIBeautyStudio />}
           {customerTab === 'book-inshop' && <BookInShop />}
           {customerTab === 'book-home' && <BookHomeService />}
           {customerTab === 'my-bookings' && <CustomerBookings />}

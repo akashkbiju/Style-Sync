@@ -116,7 +116,7 @@ export const Navbar = () => {
   // Customer nav items
   const customerNavItems = [
     { key: 'home',           label: 'Home',           icon: <Home size={14} /> },
-    { key: 'ai-hair-studio', label: 'AI Hair Studio', icon: <Sparkles size={14} />, highlight: true },
+    { key: 'ai-beauty-studio', label: 'AI Beauty Studio', icon: <Sparkles size={14} />, highlight: true },
     { key: 'catalog',        label: 'Services',        icon: <BookOpen size={14} /> },
     { key: 'book-inshop',    label: 'Book Salon',      icon: <Calendar size={14} /> },
     { key: 'book-home',      label: 'Elderly & Home',  icon: <HeartHandshake size={14} /> },
