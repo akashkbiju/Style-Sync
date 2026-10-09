@@ -23,6 +23,7 @@ import { AdminDashboard } from './pages/AdminPortal/AdminDashboard';
 import { ManageHomeRequests } from './pages/AdminPortal/ManageHomeRequests';
 import { ManageServices } from './pages/AdminPortal/ManageServices';
 import { ManageStaff } from './pages/AdminPortal/ManageStaff';
+import { ManageCustomers } from './pages/AdminPortal/ManageCustomers';
 import { PaymentRecords } from './pages/AdminPortal/PaymentRecords';
 import { CustomerFeedback } from './pages/AdminPortal/CustomerFeedback';
 
@@ -59,6 +60,7 @@ const MainContent = () => {
           {adminTab === 'home-requests' && <ManageHomeRequests />}
           {adminTab === 'services' && <ManageServices />}
           {adminTab === 'staff' && <ManageStaff />}
+          {adminTab === 'customers' && <ManageCustomers />}
           {adminTab === 'payments' && <PaymentRecords />}
           {adminTab === 'feedback' && <CustomerFeedback />}
         </>
