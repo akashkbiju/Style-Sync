@@ -12,6 +12,9 @@ import {
   ArrowRight,
   Sliders,
   CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  Eye,
   Info
 } from 'lucide-react';
 import { HAIRSTYLES, HAIR_COLORS, FACE_SHAPES } from '../beautyStudioData';
@@ -35,7 +38,18 @@ export const HairStudio = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeViewMode, setActiveViewMode] = useState('gallery'); // 'gallery' | 'preview' | 'recommendations'
 
-  // Update canvas preview whenever userPhoto, activeStyle, or activeColor changes
+  // Alignment and face preservation fine-tuning
+  const [verticalOffset, setVerticalOffset] = useState(0); // -35 to +35 px
+  const [scaleOffset, setScaleOffset] = useState(0);       // -0.15 to +0.15
+  const [isComparingOriginal, setIsComparingOriginal] = useState(false);
+  const [showFineTune, setShowFineTune] = useState(false);
+  const [preservationInfo, setPreservationInfo] = useState({
+    isPreserved: true,
+    message: 'Face Preserved',
+    source: 'ai'
+  });
+
+  // Update canvas preview whenever userPhoto, activeStyle, activeColor, or offsets change
   useEffect(() => {
     let isCancelled = false;
 
@@ -47,20 +61,31 @@ export const HairStudio = ({
 
       setIsProcessing(true);
       try {
-        let result = userPhoto;
+        let result = null;
 
         if (activeStyle) {
           result = await blendPhotographicHairstyle({
             userImageSrc: userPhoto,
             styleImageSrc: activeStyle.image,
-            colorHex: activeColor?.hex || 'transparent'
+            colorHex: activeColor?.hex || 'transparent',
+            verticalOffset,
+            scaleOffset
           });
         } else if (activeColor && activeColor.id !== 'original') {
           result = await applyCanvasHairTint(userPhoto, activeColor.hex, 0.65);
         }
 
         if (!isCancelled) {
-          setPreviewImage(result);
+          if (result && typeof result === 'object') {
+            setPreviewImage(result.resultImageUrl || userPhoto);
+            setPreservationInfo({
+              isPreserved: result.isFacePreserved !== false,
+              message: result.validationMessage || 'Face Preserved',
+              source: result.detectionSource || 'ai'
+            });
+          } else {
+            setPreviewImage(result || userPhoto);
+          }
           setIsProcessing(false);
         }
       } catch (err) {
@@ -76,7 +101,7 @@ export const HairStudio = ({
     return () => {
       isCancelled = true;
     };
-  }, [userPhoto, activeStyle, activeColor]);
+  }, [userPhoto, activeStyle, activeColor, verticalOffset, scaleOffset]);
 
   // Filter hairstyles based on criteria
   const filteredHairstyles = HAIRSTYLES.filter(style => {
@@ -149,26 +174,48 @@ export const HairStudio = ({
                 </p>
               </div>
 
-              {previewImage && (
-                <button
-                  type="button"
-                  onClick={() => onSaveFavorite({
-                    ...activeStyle,
-                    category: 'Hair',
-                    colorName: activeColor.name,
-                    colorHex: activeColor.hex,
-                    previewImage
-                  })}
-                  className={`p-2.5 rounded-xl border transition cursor-pointer ${
-                    isFavorite(activeStyle.id)
-                      ? 'border-rose-500 bg-rose-500/20 text-rose-400'
-                      : 'border-white/10 bg-zinc-900 text-zinc-400 hover:text-white'
-                  }`}
-                  title="Save to favorites"
-                >
-                  <Heart size={16} className={isFavorite(activeStyle.id) ? 'fill-rose-500' : ''} />
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {userPhoto && (
+                  <button
+                    type="button"
+                    onMouseDown={() => setIsComparingOriginal(true)}
+                    onMouseUp={() => setIsComparingOriginal(false)}
+                    onTouchStart={() => setIsComparingOriginal(true)}
+                    onTouchEnd={() => setIsComparingOriginal(false)}
+                    onClick={() => setIsComparingOriginal(prev => !prev)}
+                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                      isComparingOriginal
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                        : 'border-white/10 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800'
+                    }`}
+                    title="Hold or tap to view original photo"
+                  >
+                    <Eye size={14} />
+                    <span className="hidden sm:inline">{isComparingOriginal ? 'Original' : 'Compare'}</span>
+                  </button>
+                )}
+
+                {previewImage && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveFavorite({
+                      ...activeStyle,
+                      category: 'Hair',
+                      colorName: activeColor.name,
+                      colorHex: activeColor.hex,
+                      previewImage
+                    })}
+                    className={`p-2.5 rounded-xl border transition cursor-pointer ${
+                      isFavorite(activeStyle.id)
+                        ? 'border-rose-500 bg-rose-500/20 text-rose-400'
+                        : 'border-white/10 bg-zinc-900 text-zinc-400 hover:text-white'
+                    }`}
+                    title="Save to favorites"
+                  >
+                    <Heart size={16} className={isFavorite(activeStyle.id) ? 'fill-rose-500' : ''} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Display Area */}
@@ -182,9 +229,9 @@ export const HairStudio = ({
 
               {userPhoto ? (
                 <img
-                  src={previewImage || userPhoto}
+                  src={isComparingOriginal ? userPhoto : (previewImage || userPhoto)}
                   alt="Transformation Preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover select-none"
                 />
               ) : (
                 <div className="p-8 text-center space-y-3">
@@ -203,12 +250,102 @@ export const HairStudio = ({
                   <span className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white border border-white/15">
                     {activeStyle.name} • {activeColor.name}
                   </span>
-                  <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-full text-[10px] font-bold">
-                    Face Preserved
-                  </span>
+                  {preservationInfo.isPreserved ? (
+                    <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
+                      <CheckCircle2 size={11} className="text-emerald-400" />
+                      Face Preserved
+                    </span>
+                  ) : (
+                    <span className="bg-amber-950/90 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
+                      <AlertTriangle size={11} className="text-amber-400" />
+                      Approximate Alignment
+                    </span>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Fine-Tuning Alignment Controls */}
+            {userPhoto && (
+              <div className="p-4 bg-zinc-900/80 rounded-2xl border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowFineTune(prev => !prev)}
+                    className="flex items-center gap-2 text-xs font-bold text-white hover:text-primary transition cursor-pointer"
+                  >
+                    <Sliders size={13} className="text-primary" />
+                    <span>Hairline & Fit Fine-Tuning</span>
+                    <span className="text-[10px] font-normal text-zinc-400">
+                      ({verticalOffset !== 0 || scaleOffset !== 0 ? 'Customized' : 'Auto AI Aligned'})
+                    </span>
+                  </button>
+
+                  {(verticalOffset !== 0 || scaleOffset !== 0) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVerticalOffset(0);
+                        setScaleOffset(0);
+                      }}
+                      className="text-[10px] text-zinc-400 hover:text-white flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <RotateCcw size={11} />
+                      Reset
+                    </button>
+                  )}
+                </div>
+
+                {showFineTune && (
+                  <div className="space-y-3 pt-2 border-t border-white/5 animate-fadeIn">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-zinc-400">
+                        <span>Hairline Position</span>
+                        <span className="text-white font-mono">{verticalOffset > 0 ? `+${verticalOffset}px` : `${verticalOffset}px`}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-35"
+                        max="35"
+                        step="1"
+                        value={verticalOffset}
+                        onChange={(e) => setVerticalOffset(parseInt(e.target.value, 10))}
+                        className="w-full accent-primary h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[9px] text-zinc-500">
+                        <span>Lower (Towards Forehead)</span>
+                        <span>Higher (Towards Crown)</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-zinc-400">
+                        <span>Hair Volume & Width</span>
+                        <span className="text-white font-mono">{scaleOffset >= 0 ? `+${Math.round(scaleOffset * 100)}%` : `${Math.round(scaleOffset * 100)}%`}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-0.15"
+                        max="0.15"
+                        step="0.01"
+                        value={scaleOffset}
+                        onChange={(e) => setScaleOffset(parseFloat(e.target.value))}
+                        className="w-full accent-primary h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[9px] text-zinc-500">
+                        <span>Sleek / Compact</span>
+                        <span>Voluminous</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 text-[10px] text-zinc-400">
+                      <Info size={12} className="text-primary flex-shrink-0" />
+                      <span>{preservationInfo.message || 'Face geometry automatically guards eyes, eyebrows, and skin tone.'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Book Style Button */}
             <button
