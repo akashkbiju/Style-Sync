@@ -17,18 +17,22 @@ export const getAIServiceConfig = () => {
     // Ignore parsing errors
   }
 
-  const envKey = 
-    import.meta.env.VITE_AI_HAIRSTYLE_API_KEY || 
-    import.meta.env.VITE_FAL_KEY || 
-    import.meta.env.VITE_REPLICATE_API_TOKEN || 
-    import.meta.env.VITE_GEMINI_API_KEY || 
-    '';
-    
-  const envProvider = 
-    import.meta.env.VITE_AI_HAIRSTYLE_PROVIDER || 
-    (import.meta.env.VITE_FAL_KEY ? 'fal' : 
-     import.meta.env.VITE_REPLICATE_API_TOKEN ? 'replicate' : 
-     import.meta.env.VITE_GEMINI_API_KEY ? 'gemini' : 'local-photo');
+  let envKey = '';
+  let envProvider = 'local-photo';
+
+  if (import.meta.env.VITE_FAL_KEY) {
+    envKey = import.meta.env.VITE_FAL_KEY;
+    envProvider = 'fal';
+  } else if (import.meta.env.VITE_REPLICATE_API_TOKEN) {
+    envKey = import.meta.env.VITE_REPLICATE_API_TOKEN;
+    envProvider = 'replicate';
+  } else if (import.meta.env.VITE_GEMINI_API_KEY) {
+    envKey = import.meta.env.VITE_GEMINI_API_KEY;
+    envProvider = 'gemini';
+  } else if (import.meta.env.VITE_AI_HAIRSTYLE_API_KEY) {
+    envKey = import.meta.env.VITE_AI_HAIRSTYLE_API_KEY;
+    envProvider = import.meta.env.VITE_AI_HAIRSTYLE_PROVIDER || 'fal';
+  }
 
   const envEndpoint = import.meta.env.VITE_AI_HAIRSTYLE_ENDPOINT || '';
 
