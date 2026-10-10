@@ -15,10 +15,14 @@ import {
   AlertTriangle,
   RotateCcw,
   Eye,
-  Info
+  Info,
+  Cpu,
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import { HAIRSTYLES, HAIR_COLORS, FACE_SHAPES } from '../beautyStudioData';
-import { applyCanvasHairTint, blendPhotographicHairstyle } from '../services/beautyCanvasService';
+import { applyCanvasHairTint } from '../services/beautyCanvasService';
+import { checkHairBackendHealth, requestAiHairstyleTransfer } from '../services/aiHairTransferService';
 
 export const HairStudio = ({ 
   userPhoto, 
@@ -36,7 +40,12 @@ export const HairStudio = ({
   const [activeColor, setActiveColor] = useState(HAIR_COLORS[0]);
   const [previewImage, setPreviewImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatusText, setProcessingStatusText] = useState('Synthesizing hairstyle...');
   const [activeViewMode, setActiveViewMode] = useState('gallery'); // 'gallery' | 'preview' | 'recommendations'
+
+  // Backend & GPU Health Status
+  const [backendStatus, setBackendStatus] = useState({ online: false, gpuInfo: null });
+  const [modelBadge, setModelBadge] = useState('HairFastGAN / Poisson Seamless');
 
   // Alignment and face preservation fine-tuning
   const [verticalOffset, setVerticalOffset] = useState(0); // -35 to +35 px
@@ -49,6 +58,15 @@ export const HairStudio = ({
     source: 'ai'
   });
 
+  // Probe Python AI service on mount
+  useEffect(() => {
+    let isMounted = true;
+    checkHairBackendHealth().then(status => {
+      if (isMounted) setBackendStatus(status);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Update canvas preview whenever userPhoto, activeStyle, activeColor, or offsets change
   useEffect(() => {
     let isCancelled = false;
@@ -60,16 +78,20 @@ export const HairStudio = ({
       }
 
       setIsProcessing(true);
+      setProcessingStatusText('Initializing AI hairstyle transfer...');
       try {
         let result = null;
 
         if (activeStyle) {
-          result = await blendPhotographicHairstyle({
-            userImageSrc: userPhoto,
-            styleImageSrc: activeStyle.image,
+          result = await requestAiHairstyleTransfer({
+            userPhoto,
+            styleImage: activeStyle.image,
             colorHex: activeColor?.hex || 'transparent',
             verticalOffset,
-            scaleOffset
+            scaleOffset,
+            onStatusUpdate: (msg) => {
+              if (!isCancelled) setProcessingStatusText(msg);
+            }
           });
         } else if (activeColor && activeColor.id !== 'original') {
           result = await applyCanvasHairTint(userPhoto, activeColor.hex, 0.65);
@@ -78,10 +100,11 @@ export const HairStudio = ({
         if (!isCancelled) {
           if (result && typeof result === 'object') {
             setPreviewImage(result.resultImageUrl || userPhoto);
+            if (result.modelUsed) setModelBadge(result.modelUsed);
             setPreservationInfo({
               isPreserved: result.isFacePreserved !== false,
               message: result.validationMessage || 'Face Preserved',
-              source: result.detectionSource || 'ai'
+              source: result.hardwareInfo || result.modelUsed || 'ai'
             });
           } else {
             setPreviewImage(result || userPhoto);
@@ -163,15 +186,27 @@ export const HairStudio = ({
           
           {/* Left: Canvas Preview Box */}
           <div className="lg:col-span-7 bg-zinc-950/80 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-lg font-bold text-white flex items-center gap-2">
                   <Sparkles size={17} className="text-primary" />
                   Photographic Hairstyle Transformation
                 </h3>
-                <p className="text-xs text-zinc-400">
-                  Preserving your real facial identity, skin tone, and features
-                </p>
+                <div className="flex items-center gap-2 pt-0.5">
+                  <p className="text-xs text-zinc-400">
+                    Preserving your real facial identity, skin tone, and features
+                  </p>
+                  {backendStatus.online ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-500/30">
+                      <Zap size={9} className="text-emerald-400" />
+                      Python AI ({backendStatus.gpuInfo?.device_name || 'GPU'})
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-zinc-800 text-zinc-400 border border-white/10">
+                      <Cpu size={9} /> Browser Landmark Guard
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -183,7 +218,7 @@ export const HairStudio = ({
                     onTouchStart={() => setIsComparingOriginal(true)}
                     onTouchEnd={() => setIsComparingOriginal(false)}
                     onClick={() => setIsComparingOriginal(prev => !prev)}
-                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer select-none ${
                       isComparingOriginal
                         ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                         : 'border-white/10 bg-zinc-900 text-zinc-300 hover:text-white hover:bg-zinc-800'
@@ -221,9 +256,10 @@ export const HairStudio = ({
             {/* Display Area */}
             <div className="relative aspect-[3/4] max-h-[480px] bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 flex items-center justify-center mx-auto shadow-inner">
               {isProcessing && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-2 text-white text-xs font-semibold">
-                  <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                  <span>Compositing hair geometry...</span>
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-md z-20 flex flex-col items-center justify-center gap-3 text-white text-xs font-semibold px-6 text-center">
+                  <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  <span className="text-zinc-200 tracking-wide">{processingStatusText}</span>
+                  <span className="text-[10px] text-zinc-500">Zero forehead artifacts • Facial features locked</span>
                 </div>
               )}
 
@@ -250,17 +286,22 @@ export const HairStudio = ({
                   <span className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white border border-white/15">
                     {activeStyle.name} • {activeColor.name}
                   </span>
-                  {preservationInfo.isPreserved ? (
-                    <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
-                      <CheckCircle2 size={11} className="text-emerald-400" />
-                      Face Preserved
+                  <div className="flex items-center gap-1.5">
+                    <span className="bg-black/80 backdrop-blur-md text-zinc-400 border border-white/10 px-2 py-0.5 rounded-full text-[9px] hidden sm:inline">
+                      {modelBadge}
                     </span>
-                  ) : (
-                    <span className="bg-amber-950/90 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
-                      <AlertTriangle size={11} className="text-amber-400" />
-                      Approximate Alignment
-                    </span>
-                  )}
+                    {preservationInfo.isPreserved ? (
+                      <span className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
+                        <CheckCircle2 size={11} className="text-emerald-400" />
+                        Face Preserved
+                      </span>
+                    ) : (
+                      <span className="bg-amber-950/90 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg backdrop-blur-sm">
+                        <AlertTriangle size={11} className="text-amber-400" />
+                        Approximate Alignment
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
