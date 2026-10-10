@@ -23,7 +23,9 @@ import {
   PhoneCall,
   Sparkles,
   AlertTriangle,
-  Check
+  Check,
+  Smartphone,
+  Download
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -50,6 +52,28 @@ export const Navbar = () => {
   const [modalPhone, setModalPhone] = useState('');
   const [modalAvatar, setModalAvatar] = useState('');
   const [modalSuccess, setModalSuccess] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert("📱 How to install StyleSync App on your device:\n\n• On Android (Chrome): Tap the 3 dots menu at top right, then tap 'Install app' or 'Add to Home screen'.\n• On iPhone (Safari): Tap the Share button at the bottom, scroll down, and tap 'Add to Home Screen'.\n• On PC/Mac: Click the Install icon in the browser address bar.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   // Sync modal inputs when opened or currentUser changes
   useEffect(() => {
@@ -204,6 +228,16 @@ export const Navbar = () => {
           {/* ── Right Controls: Theme Toggle + User Account + Hamburger Button ── */}
           <div className="flex items-center gap-3 shrink-0">
             
+            {/* Install App Button (Desktop) */}
+            <button
+              onClick={handleInstallClick}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-zinc-300 hover:text-white hover:border-primary bg-zinc-900/80 border-white/10 shadow-sm active:scale-95"
+              title="Install StyleSync App on your device"
+            >
+              <Smartphone size={13} className="text-primary" />
+              <span>Install App</span>
+            </button>
+
             {/* Theme Switcher Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -477,6 +511,18 @@ export const Navbar = () => {
               Call <strong>+91 98765 43210</strong> for direct phone assisted home bookings.
             </p>
           </div>
+
+          {/* Mobile Install App Button */}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              handleInstallClick();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+          >
+            <Smartphone size={14} />
+            Install StyleSync App
+          </button>
 
           {/* Profile Settings Button in Drawer */}
           <button

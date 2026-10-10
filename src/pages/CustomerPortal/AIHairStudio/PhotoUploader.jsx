@@ -134,6 +134,33 @@ export const PhotoUploader = ({
     if (file) processImageFile(file);
   };
 
+  // Convert demo model to clean Data URL for reliable processing
+  const handleSelectDemoModel = (demo) => {
+    setIsProcessing(true);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        onPhotoChange(dataUrl);
+      } catch (err) {
+        onPhotoChange(demo.url);
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    img.onerror = () => {
+      onPhotoChange(demo.url);
+      setIsProcessing(false);
+    };
+    img.src = demo.url;
+  };
+
   // Rotate photo 90 degrees clockwise
   const handleRotate = () => {
     if (!photo) return;
@@ -253,7 +280,7 @@ export const PhotoUploader = ({
                 <button
                   key={demo.name}
                   type="button"
-                  onClick={() => onPhotoChange(demo.url)}
+                  onClick={() => handleSelectDemoModel(demo)}
                   className="group relative rounded-xl overflow-hidden border border-white/10 hover:border-primary transition-all aspect-[4/5] bg-zinc-900 cursor-pointer text-left"
                 >
                   <img
