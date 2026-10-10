@@ -10,6 +10,9 @@ export const ServiceCatalog = () => {
   const categories = ['All', 'Hair', 'Skincare', 'Nails', 'Grooming', 'Special Care'];
 
   const filteredServices = services.filter(service => {
+    // Hide services that are pending admin approval
+    if (service.status === 'Pending') return false;
+    
     const matchesCat = selectedCategory === 'All' || service.category === selectedCategory;
     const matchesSearch = service.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           service.description.toLowerCase().includes(searchTerm.toLowerCase());

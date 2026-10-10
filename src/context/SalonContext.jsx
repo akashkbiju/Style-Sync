@@ -4,7 +4,8 @@ import {
   INITIAL_STAFF, 
   INITIAL_BOOKINGS, 
   INITIAL_PAYMENTS, 
-  INITIAL_FEEDBACK 
+  INITIAL_FEEDBACK,
+  INITIAL_COMPLAINTS 
 } from '../data/seedData';
 import { fetchStaffFromDB, addStaffToDB, updateStaffInDB, deleteStaffFromDB } from '../firebase/staffService';
 import { fetchCollection, addDocument, updateDocument, deleteDocument } from '../firebase/dbService';
@@ -150,6 +151,12 @@ export const SalonProvider = ({ children }) => {
           if (dbPending.length > 0) setPendingStaff(dbPending);
         }
 
+        // 7. Complaints
+        const dbComplaints = await fetchCollection('complaints');
+        if (dbComplaints !== null) {
+          if (dbComplaints.length > 0) setComplaints(dbComplaints);
+        }
+
       } catch (error) {
         console.error("Failed to load collections from Firestore:", error);
       } finally {
@@ -215,6 +222,15 @@ export const SalonProvider = ({ children }) => {
     localStorage.setItem('stylesync_staff_messages', JSON.stringify(staffMessages));
   }, [staffMessages]);
 
+  const [complaints, setComplaints] = useState(() => {
+    const saved = localStorage.getItem('stylesync_complaints');
+    return saved ? JSON.parse(saved) : INITIAL_COMPLAINTS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('stylesync_complaints', JSON.stringify(complaints));
+  }, [complaints]);
+
   // Actions & Operations
   const addBooking = async (newBookingData, paymentDetails) => {
     const bookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -279,10 +295,18 @@ export const SalonProvider = ({ children }) => {
   const addService = (newService) => {
     const srv = {
       id: `srv-${Date.now()}`,
+      status: newService.status || 'Active', // Default to Active, Staff will pass 'Pending'
       ...newService
     };
     setServices(prev => [srv, ...prev]);
     addDocument('services', srv).catch(console.error);
+  };
+
+  const updateServiceStatus = (serviceId, newStatus) => {
+    setServices(prev => 
+      prev.map(s => s.id === serviceId ? { ...s, status: newStatus } : s)
+    );
+    updateDocument('services', serviceId, { status: newStatus }).catch(console.error);
   };
 
   const deleteService = (serviceId) => {
@@ -504,6 +528,59 @@ export const SalonProvider = ({ children }) => {
     setCustomerTab('landing');
   };
 
+  // ── Complaint Box Operations ──
+  const submitComplaint = async (complaintData) => {
+    const newEntry = {
+      id: complaintData.id || `cmp-${Date.now()}`,
+      customerName: currentUser?.name || complaintData.customerName || 'Anonymous Client',
+      customerEmail: currentUser?.email || complaintData.customerEmail || '',
+      customerPhone: currentUser?.phone || complaintData.customerPhone || '',
+      category: complaintData.category || 'Service Quality',
+      subject: complaintData.subject || 'Salon Issue',
+      description: complaintData.description || '',
+      urgency: complaintData.urgency || 'Normal',
+      status: 'Pending Review',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      timestamp: new Date().toISOString(),
+      adminAction: '',
+      adminActionDate: '',
+      adminName: '',
+      ...complaintData
+    };
+
+    if (!newEntry.id) newEntry.id = `cmp-${Date.now()}`;
+
+    setComplaints(prev => [newEntry, ...prev]);
+
+    try {
+      await addDocument('complaints', newEntry);
+    } catch(err) {
+      console.warn("Failed to add complaint to Firestore DB", err);
+    }
+
+    return newEntry;
+  };
+
+  const updateComplaintStatus = async (complaintId, status, adminAction = '', adminName = '') => {
+    const actionDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const updates = {
+      status,
+      adminAction,
+      adminActionDate: actionDate,
+      adminName: adminName || (currentUser?.name || 'Salon Administration')
+    };
+
+    setComplaints(prev =>
+      prev.map(c => c.id === complaintId ? { ...c, ...updates } : c)
+    );
+
+    try {
+      await updateDocument('complaints', complaintId, updates);
+    } catch(err) {
+      console.warn("Failed to update complaint in Firestore DB", err);
+    }
+  };
+
   return (
     <SalonContext.Provider value={{
       // Theme
@@ -528,11 +605,13 @@ export const SalonProvider = ({ children }) => {
       payments,
       feedback,
       staffMessages,
+      complaints,
       // Actions
       addBooking,
       updateBookingStatus,
       assignStylistToBooking,
       addService,
+      updateServiceStatus,
       deleteService,
       addStaffMember,
       removeStaffMember,
@@ -545,6 +624,8 @@ export const SalonProvider = ({ children }) => {
       addFeedback,
       sendStaffMessage,
       markStaffMessagesRead,
+      submitComplaint,
+      updateComplaintStatus,
     }}>
       {children}
     </SalonContext.Provider>

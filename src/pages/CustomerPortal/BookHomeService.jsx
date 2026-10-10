@@ -64,14 +64,25 @@ export const BookHomeService = () => {
   );
   
   // Prefer currently active / logged in staff member if present
-  const activeStaff = staff.find(s => s.isLoggedIn) || staff[0];
   const [selectedStylistName, setSelectedStylistName] = useState('');
+  const [preferredGender, setPreferredGender] = useState('No Preference');
+
+  const filteredStaff = staff.filter(s => {
+    if (preferredGender === 'No Preference') return true;
+    return s.gender === preferredGender;
+  });
+  
+  const activeStaff = filteredStaff.find(s => s.isLoggedIn) || filteredStaff[0];
 
   useEffect(() => {
-    if (staff.length > 0 && !selectedStylistName) {
-      setSelectedStylistName(staff.find(s => s.isLoggedIn)?.name || staff[0]?.name || '');
+    if (filteredStaff.length > 0) {
+      if (!filteredStaff.some(s => s.name === selectedStylistName)) {
+        setSelectedStylistName(activeStaff?.name || filteredStaff[0]?.name || '');
+      }
+    } else {
+      setSelectedStylistName('');
     }
-  }, [staff, selectedStylistName]);
+  }, [filteredStaff, activeStaff, selectedStylistName]);
 
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
@@ -93,7 +104,7 @@ export const BookHomeService = () => {
   const [createdBooking, setCreatedBooking] = useState(null);
 
   const selectedService = services.find(s => s.id === selectedServiceId) || homeServices[0] || services[0];
-  const selectedStylist = staff.find(stf => stf.name === selectedStylistName) || staff[0];
+  const selectedStylist = staff.find(stf => stf.name === selectedStylistName);
 
   const availableAssistanceOptions = [
     { id: 'wheelchair', label: 'Wheelchair / Limited Mobility', icon: '🦽' },
@@ -421,16 +432,32 @@ export const BookHomeService = () => {
             <div className="form-group mb-5">
               <div className="flex items-center justify-between mb-2">
                 <label className="form-label text-xs mb-0">Certified Home Visit Specialist</label>
+                
+                {/* Gender Preference Filter */}
+                <select 
+                  className="form-select" 
+                  style={{ width: 'auto', padding: '0.25rem 2rem 0.25rem 0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', minHeight: 'auto' }}
+                  value={preferredGender}
+                  onChange={(e) => setPreferredGender(e.target.value)}
+                >
+                  <option value="No Preference">Any Gender</option>
+                  <option value="Male">Male Stylist</option>
+                  <option value="Female">Female Stylist</option>
+                </select>
+              </div>
                 {staff.some(s => s.isLoggedIn) && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Stylist Online in Salon
                   </span>
                 )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {staff.map(stf => {
+              {filteredStaff.length === 0 ? (
+                <div style={{ padding: '1rem', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', borderRadius: '4px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                  No specialists found matching your preference.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {filteredStaff.map(stf => {
                   const isSelected = selectedStylistName === stf.name;
                   const isOnline = stf.isLoggedIn || (currentUser?.role === 'staff' && currentUser?.name === stf.name);
                   return (
@@ -452,6 +479,14 @@ export const BookHomeService = () => {
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-1.5">
                           <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{stf.name}</p>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                            stf.level === 'Lead' ? 'bg-pink-500/20 text-pink-300 border-pink-500/40' :
+                            stf.level === 'Senior' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                            stf.level === 'Mid-Level' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                            'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                          }`}>
+                            {stf.level || 'Junior'}
+                          </span>
                           {isOnline && (
                             <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">ONLINE</span>
                           )}
@@ -464,11 +499,22 @@ export const BookHomeService = () => {
                   );
                 })}
               </div>
+              )}
 
               {/* Selected Stylist Profile & Reviews Details */}
               {selectedStylist && (
                 <div className="mt-4 p-4 rounded-lg border bg-black/20" style={{ borderColor: 'var(--border-subtle)' }}>
-                  <h4 className="text-sm font-bold mb-2 text-primary">Specialist Profile: {selectedStylist.name}</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-primary m-0">Specialist Profile: {selectedStylist.name}</h4>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      selectedStylist.level === 'Lead' ? 'bg-pink-500/20 text-pink-300 border-pink-500/40' :
+                      selectedStylist.level === 'Senior' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                      selectedStylist.level === 'Mid-Level' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' :
+                      'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                    }`}>
+                      Level: {selectedStylist.level || 'Junior'}
+                    </span>
+                  </div>
                   {selectedStylist.workingHistory && (
                     <div className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                       <strong style={{ color: 'var(--text-primary)' }}>Experience & History:</strong> {selectedStylist.workingHistory}

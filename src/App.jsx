@@ -14,6 +14,7 @@ import { ServiceCatalog } from './pages/CustomerPortal/ServiceCatalog';
 import { BookInShop } from './pages/CustomerPortal/BookInShop';
 import { BookHomeService } from './pages/CustomerPortal/BookHomeService';
 import { CustomerBookings } from './pages/CustomerPortal/CustomerBookings';
+import { ComplaintBox } from './pages/CustomerPortal/ComplaintBox';
 
 // Staff Pages
 import { StaffDashboard } from './pages/StaffPortal/StaffDashboard';
@@ -47,6 +48,7 @@ const MainContent = () => {
           {customerTab === 'book-inshop' && <BookInShop />}
           {customerTab === 'book-home' && <BookHomeService />}
           {customerTab === 'my-bookings' && <CustomerBookings />}
+          {customerTab === 'complaints' && <ComplaintBox />}
         </>
       )}
 

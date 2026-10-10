@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSalon } from '../../context/SalonContext';
 import { 
   Calendar, 
@@ -17,8 +17,98 @@ import {
   ShieldAlert,
   LogOut,
   MessageSquare,
-  Send
+  Send,
+  Shuffle,
+  Sparkles,
+  RefreshCw,
+  Upload,
+  Camera,
+  Award
 } from 'lucide-react';
+
+const STAFF_LEVEL_COLORS = {
+  'Junior':    { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.35)', text: '#60a5fa' },
+  'Mid-Level': { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.35)', text: '#34d399' },
+  'Senior':    { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.35)', text: '#fbbf24' },
+  'Lead':      { bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.35)', text: '#f472b6' },
+};
+
+// Curated avatar presets for staff profile setup
+const RANDOM_AVATARS = [
+  // Realistic Salon / Stylist Portraits - Female
+  {
+    name: 'Sophia',
+    gender: 'Female',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Elena',
+    gender: 'Female',
+    url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Maya',
+    gender: 'Female',
+    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Chloe',
+    gender: 'Female',
+    url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Aria',
+    gender: 'Female',
+    url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=250&q=80'
+  },
+  // Realistic Salon / Stylist Portraits - Male
+  {
+    name: 'Marcus',
+    gender: 'Male',
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Julian',
+    gender: 'Male',
+    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'David',
+    gender: 'Male',
+    url: 'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Alexander',
+    gender: 'Male',
+    url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=250&q=80'
+  },
+  {
+    name: 'Lucas',
+    gender: 'Male',
+    url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=250&q=80'
+  },
+  // Modern Illustrated / Vector Avatars (DiceBear)
+  {
+    name: 'Style Avatar 1',
+    gender: 'Any',
+    url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Harper&backgroundColor=b6e3f4'
+  },
+  {
+    name: 'Style Avatar 2',
+    gender: 'Any',
+    url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Jasper&backgroundColor=ffd5dc'
+  },
+  {
+    name: 'Style Avatar 3',
+    gender: 'Any',
+    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mason&clothingColor=262e33'
+  },
+  {
+    name: 'Style Avatar 4',
+    gender: 'Any',
+    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bella&clothingColor=3c4f5e'
+  }
+];
 
 export const StaffDashboard = () => {
   const { 
@@ -176,12 +266,20 @@ export const StaffDashboard = () => {
   const chatEndRef = React.useRef(null);
 
   // Find staff profile
-  const staffProfile = staff.find(s => s.name === currentUser?.name || s.email === currentUser?.email) || {
+  const staffProfile = staff.find(s => 
+    (currentUser?.uid && s.id === currentUser.uid) ||
+    (currentUser?.email && s.email === currentUser.email) ||
+    (currentUser?.name && s.name === currentUser.name)
+  ) || {
+    id: currentUser?.uid,
     name: currentUser?.name || 'Stylist Specialist',
     role: currentUser?.staffRole || 'Senior Master Stylist',
     rating: 5.0,
     specialty: 'Hair Styling & Senior Citizen Home Care'
   };
+
+  const currentLevel = staffProfile.level || 'Junior';
+  const lc = STAFF_LEVEL_COLORS[currentLevel] || STAFF_LEVEL_COLORS['Junior'];
 
   // Strictly filter bookings for THIS specific logged-in staff member only
   const displayBookings = bookings.filter(b => 
@@ -196,16 +294,123 @@ export const StaffDashboard = () => {
   const [profileSpecialty, setProfileSpecialty] = useState(staffProfile.specialty || '');
   const [profileExperience, setProfileExperience] = useState(staffProfile.experience || '');
   const [profileWorkingHistory, setProfileWorkingHistory] = useState(staffProfile.workingHistory || '');
+  const [profileGender, setProfileGender] = useState(staffProfile.gender || 'Not specified');
+  const [profileAvatar, setProfileAvatar] = useState(staffProfile.avatar || '');
   const [profileSaved, setProfileSaved] = useState(false);
+
+  // Synchronize state when staffProfile loads or changes from DB
+  useEffect(() => {
+    if (staffProfile) {
+      if (staffProfile.specialty) setProfileSpecialty(staffProfile.specialty);
+      if (staffProfile.experience) setProfileExperience(staffProfile.experience);
+      if (staffProfile.workingHistory) setProfileWorkingHistory(staffProfile.workingHistory);
+      if (staffProfile.gender) setProfileGender(staffProfile.gender);
+      if (staffProfile.avatar) setProfileAvatar(staffProfile.avatar);
+    }
+  }, [staffProfile.id, staffProfile.avatar, staffProfile.gender, staffProfile.specialty]);
+
+  // Handle generating or selecting a random avatar
+  const handleRandomAvatar = (type = 'any') => {
+    if (type === 'vector') {
+      const styles = ['lorelei', 'avataaars', 'personas', 'notionists'];
+      const style = styles[Math.floor(Math.random() * styles.length)];
+      const seed = Math.random().toString(36).substring(2, 8) + Date.now().toString(36).substring(4);
+      setProfileAvatar(`https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`);
+      return;
+    }
+
+    if (type === 'photo') {
+      let pool = RANDOM_AVATARS.filter(a => a.url.includes('unsplash'));
+      if (profileGender === 'Male') {
+        pool = pool.filter(a => a.gender === 'Male');
+      } else if (profileGender === 'Female') {
+        pool = pool.filter(a => a.gender === 'Female');
+      }
+      const filtered = pool.filter(a => a.url !== profileAvatar);
+      const chosenPool = filtered.length > 0 ? filtered : pool;
+      const chosen = chosenPool[Math.floor(Math.random() * chosenPool.length)];
+      if (chosen) setProfileAvatar(chosen.url);
+      return;
+    }
+
+    // Default 'any': mix between fresh unique vector and stylish photo
+    if (Math.random() > 0.5) {
+      handleRandomAvatar('vector');
+    } else {
+      handleRandomAvatar('photo');
+    }
+  };
+
+  // File upload state & ref
+  const fileInputRef = React.useRef(null);
+  const [uploadError, setUploadError] = useState('');
+
+  // Client-side image processing & compression to base64 Data URL
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError('');
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (JPG, PNG, WEBP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize to maximum 400x400 keeping aspect ratio for fast loading and Firestore compatibility
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Export high-quality compressed JPEG base64 Data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setProfileAvatar(dataUrl);
+      };
+      img.onerror = () => {
+        setUploadError('Failed to load image file.');
+      };
+      img.src = event.target.result;
+    };
+    reader.onerror = () => {
+      setUploadError('Error reading file from disk.');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    if (!staffProfile.id) return;
+    const targetId = staffProfile.id || currentUser?.uid;
+    if (!targetId) return;
     try {
-      await updateStaffProfile(staffProfile.id, {
+      await updateStaffProfile(targetId, {
         specialty: profileSpecialty,
         experience: profileExperience,
-        workingHistory: profileWorkingHistory
+        workingHistory: profileWorkingHistory,
+        gender: profileGender,
+        avatar: profileAvatar
       });
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
@@ -242,14 +447,44 @@ export const StaffDashboard = () => {
       {/* Left Sidebar */}
       <aside className="neon-panel" style={{ padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(10, 10, 15, 0.9)' }}>
         
-        {/* Style Sync Logo */}
-        <div style={{ marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
-          <div className="brand-logo-text">
-            <span className="brand-logo-style" style={{ fontSize: '1.4rem' }}>Style</span>
-            <span className="brand-logo-sync" style={{ fontSize: '1.25rem' }}>Sync</span>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', marginTop: '0.2rem' }}>
-            Staff Portal: <strong>{staffProfile.name}</strong>
+        {/* Style Sync Logo & Staff Avatar */}
+        <div style={{ marginBottom: '1.5rem', paddingLeft: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {(profileAvatar || staffProfile.avatar) ? (
+            <img 
+              src={profileAvatar || staffProfile.avatar} 
+              alt={staffProfile.name} 
+              style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-gold)', flexShrink: 0 }} 
+            />
+          ) : (
+            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+              <User size={20} color="var(--accent-gold)" />
+            </div>
+          )}
+          <div>
+            <div className="brand-logo-text">
+              <span className="brand-logo-style" style={{ fontSize: '1.3rem' }}>Style</span>
+              <span className="brand-logo-sync" style={{ fontSize: '1.15rem' }}>Sync</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', marginTop: '0.1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+              Staff: <strong>{staffProfile.name}</strong>
+            </div>
+            <div style={{ marginTop: '0.25rem' }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.1rem 0.55rem',
+                borderRadius: '9999px',
+                background: lc.bg,
+                border: `1px solid ${lc.border}`,
+                color: lc.text,
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em'
+              }}>
+                <Award size={11} /> {currentLevel}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -707,15 +942,16 @@ export const StaffDashboard = () => {
                   description: newServiceDesc,
                   duration: '45 mins',
                   image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
-                  homeServiceAvailable: newServiceCategory === 'Senior Care'
+                  homeServiceAvailable: newServiceCategory === 'Senior Care',
+                  status: 'Pending'
                 });
                 setNewServiceTitle('');
                 setNewServicePrice('');
                 setNewServiceDesc('');
-                alert('Service added successfully to the catalog!');
+                alert('Service proposal submitted! It will be visible to customers once approved by the Admin.');
               }}
             >
-              Add Service to Catalog
+              Submit Service Proposal
             </button>
           </div>
         ) : activeSideTab === 'reviews' ? (
@@ -747,8 +983,355 @@ export const StaffDashboard = () => {
           </div>
         ) : activeSideTab === 'profile' ? (
           <div className="neon-panel" style={{ padding: '2rem' }}>
-            <h2 className="font-serif gold-text" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>Edit Public Profile</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <h2 className="font-serif gold-text" style={{ fontSize: '1.8rem', margin: 0 }}>Edit Public Profile</h2>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: 'var(--radius-full)',
+                    background: lc.bg,
+                    border: `1px solid ${lc.border}`,
+                    color: lc.text,
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase'
+                  }}>
+                    <Award size={14} /> Level: {currentLevel}
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
+                  Manage your public stylist avatar, credentials, and information visible to salon clients.
+                </p>
+              </div>
+            </div>
+
+            {/* Staff Level Tier Banner */}
+            <div style={{
+              background: lc.bg,
+              border: `1px solid ${lc.border}`,
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: `1px solid ${lc.border}`,
+                  flexShrink: 0
+                }}>
+                  <Award size={22} style={{ color: lc.text }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                    Official Staff Tier
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: lc.text }}>
+                    {currentLevel} Specialist
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', maxWidth: '360px' }}>
+                Evaluated and assigned by Salon Administration. Higher tiers receive priority booking placement and elite service certifications.
+              </div>
+            </div>
+
             <form onSubmit={handleUpdateProfile}>
+              {/* Profile Avatar Selection Panel */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1.5rem',
+                marginBottom: '1.75rem'
+              }}>
+                <label className="form-label" style={{ fontSize: '1rem', color: '#fff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Sparkles size={18} style={{ color: 'var(--accent-gold)' }} />
+                  Profile Avatar & Photo
+                </label>
+
+                {/* Preview + Quick Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      width: '90px',
+                      height: '90px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid var(--accent-gold)',
+                      boxShadow: '0 0 15px rgba(245, 158, 11, 0.3)',
+                      background: 'rgba(20, 20, 30, 0.8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {profileAvatar ? (
+                        <img
+                          src={profileAvatar}
+                          alt="Profile Avatar"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <User size={44} style={{ color: 'var(--text-secondary)' }} />
+                      )}
+                    </div>
+                    {profileGender && profileGender !== 'Not specified' && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '9999px',
+                        background: profileGender === 'Male' ? 'rgba(59, 130, 246, 0.95)' : 'rgba(236, 72, 153, 0.95)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.5)'
+                      }}>
+                        {profileGender === 'Male' ? '♂ M' : '♀ F'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                      Upload your own photo from your device, or pick a random avatar below:
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn-gold"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: '0.55rem 1.1rem',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer'
+                        }}
+                        title="Upload a photo from your computer or phone"
+                      >
+                        <Upload size={15} /> Upload Photo
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRandomAvatar('any')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: '0.55rem 1rem',
+                          fontSize: '0.85rem',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.18)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title="Pick a completely random avatar matching your profile"
+                      >
+                        <Shuffle size={15} /> Random Avatar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRandomAvatar('vector')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: '0.55rem 0.9rem',
+                          fontSize: '0.85rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#e2e8f0',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title="Generate a unique modern vector avatar via DiceBear"
+                      >
+                        <Sparkles size={15} style={{ color: '#38bdf8' }} /> Artistic Vector
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRandomAvatar('photo')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: '0.55rem 0.9rem',
+                          fontSize: '0.85rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#e2e8f0',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title="Choose a realistic salon portrait (matches gender if selected)"
+                      >
+                        <RefreshCw size={15} style={{ color: '#ec4899' }} /> Stylist Portrait
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preset Avatar Selection Grid */}
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.6rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Quick Select Presets
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.65rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                    {RANDOM_AVATARS.map((av, idx) => {
+                      const isSelected = profileAvatar === av.url;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setProfileAvatar(av.url)}
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
+                            padding: 0,
+                            border: isSelected ? '3px solid var(--accent-gold)' : '2px solid rgba(255,255,255,0.12)',
+                            outline: isSelected ? '2px solid rgba(245, 158, 11, 0.4)' : 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            transform: isSelected ? 'scale(1.08)' : 'scale(1)',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? '0 0 12px rgba(245, 158, 11, 0.6)' : 'none'
+                          }}
+                          title={`${av.name} (${av.gender})`}
+                        >
+                          <img
+                            src={av.url}
+                            alt={av.name}
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Upload Photo Dropzone & File Input */}
+                <div style={{ marginTop: '1.25rem' }}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Camera size={15} style={{ color: 'var(--accent-gold)' }} />
+                      Upload Photo
+                    </span>
+                    {profileAvatar && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileAvatar('')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          padding: 0
+                        }}
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      border: '2px dashed rgba(245, 158, 11, 0.4)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '1.4rem 1rem',
+                      textAlign: 'center',
+                      background: 'rgba(245, 158, 11, 0.03)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent-gold)';
+                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.03)';
+                    }}
+                  >
+                    <Upload size={26} style={{ color: 'var(--accent-gold)' }} />
+                    <div>
+                      <div style={{ fontSize: '0.95rem', color: '#fff', fontWeight: 600 }}>
+                        Click to Browse & Upload Photo from Device
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                        Supports JPG, PNG, WEBP • Automatically compressed & optimized
+                      </div>
+                    </div>
+                  </div>
+
+                  {uploadError && (
+                    <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                      ⚠️ {uploadError}
+                    </div>
+                  )}
+
+                  {/* Collapsed link for optional image URL fallback */}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <details style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <summary style={{ cursor: 'pointer', userSelect: 'none', color: 'var(--text-secondary)' }}>
+                        Or provide image via web URL
+                      </summary>
+                      <input 
+                        type="url" 
+                        className="form-input" 
+                        style={{ marginTop: '0.5rem' }}
+                        value={profileAvatar && profileAvatar.startsWith('data:') ? '' : profileAvatar} 
+                        onChange={e => setProfileAvatar(e.target.value)} 
+                        placeholder="https://example.com/your-photo.jpg" 
+                      />
+                    </details>
+                  </div>
+                </div>
+              </div>
               <div className="form-group">
                 <label className="form-label">Specialty & Title</label>
                 <input 
@@ -770,6 +1353,19 @@ export const StaffDashboard = () => {
                   placeholder="e.g. 5+ Years" 
                   required 
                 />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Gender</label>
+                <select 
+                  className="form-select" 
+                  value={profileGender} 
+                  onChange={e => setProfileGender(e.target.value)}
+                  required
+                >
+                  <option value="Not specified">Not specified</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Working History & Bio</label>
