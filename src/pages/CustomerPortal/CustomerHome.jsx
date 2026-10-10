@@ -219,13 +219,13 @@ export const CustomerHome = () => {
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-r from-zinc-950 via-zinc-900 to-black p-8 sm:p-10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-3 max-w-xl text-center md:text-left">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-                    <Sparkles size={13} /> Complete Beauty Suite • 5 Studios
+                    <Sparkles size={13} /> 5 Studios In One • Virtual Try-On
                   </div>
                   <h3 className="font-display text-2xl sm:text-3xl font-bold uppercase text-white">
-                    Simulate Styles, Skin, Nails & Makeup With <span className="text-primary text-glow">AI Beauty Studio</span>
+                    Explore Hair, Skin, Nails, Makeup & Grooming With <span className="text-primary text-glow">AI Beauty Studio</span>
                   </h3>
                   <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-light">
-                    Upload your selfie or open your live camera. Explore Haircuts & Colors, Visible Skin Analysis, Nail Art Designer, Virtual Makeup Swatches, and Beard Grooming.
+                    Upload your selfie or open your live camera. Discover tailor-made hairstyles, facial skin analysis, curated nail art, lip & blush shades, and beard styling.
                   </p>
                 </div>
 

@@ -1,618 +1,380 @@
-// StyleSync AI Beauty Studio - Comprehensive Catalog & Styling Dataset
-// Spanning Hair, Skin, Nail, Makeup, and Grooming Categories
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. HAIR STUDIO DATA
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const HAIRSTYLE_CATEGORIES = [
-  { id: 'all', label: 'All Cuts' },
-  { id: 'short', label: 'Short' },
-  { id: 'medium', label: 'Medium' },
-  { id: 'long', label: 'Long' },
-  { id: 'curly', label: 'Curly' },
-  { id: 'wavy', label: 'Wavy' },
-  { id: 'straight', label: 'Straight' },
-  { id: 'trending', label: 'Trending 🔥' },
-];
-
-export const GENDER_FILTERS = [
-  { id: 'all', label: 'All Styles' },
-  { id: 'boy', label: 'Men & Boys' },
-  { id: 'girl', label: 'Women & Girls' },
-];
-
-export const HAIRSTYLES = [
-  // ─── MEN'S STYLES ───
-  {
-    id: 'hair-low-fade',
-    name: 'Clean Low Fade',
-    gender: 'boy',
-    category: 'short',
-    tags: ['Short', 'Low Fade', 'Clean', 'Professional'],
-    trending: true,
-    faceShapes: ['Oval', 'Round', 'Square'],
-    hairTexture: ['Straight', 'Wavy', 'Curly'],
-    maintenance: 'Low',
-    recommendedService: "Men's Precision Fade & Cut",
-    duration: '45 mins',
-    price: 60,
-    description: 'Tapered hairline starting just above ears, blending cleanly into longer top hair. Crisp and versatile for professional and casual styles.',
-    image: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Finish with matte styling clay for non-greasy textured hold.'
-  },
-  {
-    id: 'hair-mid-fade',
-    name: 'Mid Taper Fade with Texture',
-    gender: 'boy',
-    category: 'short',
-    tags: ['Short', 'Mid Fade', 'Textured', 'Modern'],
-    trending: true,
-    faceShapes: ['Oval', 'Heart', 'Diamond'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'Medium',
-    recommendedService: "Men's Precision Fade & Cut",
-    duration: '45 mins',
-    price: 60,
-    description: 'Balanced fade starting midway up the temples, emphasizing textured scissor-cut length on the crown.',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Spritz sea salt spray and air dry for effortless separation.'
-  },
-  {
-    id: 'hair-textured-crop',
-    name: 'Textured French Crop',
-    gender: 'boy',
-    category: 'short',
-    tags: ['Short', 'French Crop', 'Fringe', 'Edgy'],
-    trending: true,
-    faceShapes: ['Oval', 'Oblong', 'Diamond'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'Low',
-    recommendedService: "Men's Designer Crop",
-    duration: '40 mins',
-    price: 65,
-    description: 'Blunt or textured micro-fringe paired with short faded sides. Framed to highlight sharp cheekbones.',
-    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Style forward with a pea-sized amount of styling paste.'
-  },
-  {
-    id: 'hair-classic-pompadour',
-    name: 'Modern Executive Pompadour',
-    gender: 'boy',
-    category: 'medium',
-    tags: ['Medium', 'Pompadour', 'Volume', 'Classic'],
-    trending: false,
-    faceShapes: ['Round', 'Square', 'Oval'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'High',
-    recommendedService: "Executive Grooming & Pompadour Cut",
-    duration: '50 mins',
-    price: 75,
-    description: 'Swept upwards and backwards with high crown volume, tapered cleanly through the temples and neck.',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Blow dry with a round brush for lift, set with medium-shine water pomade.'
-  },
-  {
-    id: 'hair-curly-undercut',
-    name: 'Curly Crown with Drop Undercut',
-    gender: 'boy',
-    category: 'curly',
-    tags: ['Curly', 'Undercut', 'High Contrast'],
-    trending: true,
-    faceShapes: ['Oval', 'Diamond', 'Heart'],
-    hairTexture: ['Curly', 'Wavy'],
-    maintenance: 'Medium',
-    recommendedService: "Curly Hair Sculpt & Fade",
-    duration: '50 mins',
-    price: 70,
-    description: 'Natural defined ringlets on top paired with a sharp skin fade on the back and sides.',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Use curl-enhancing cream on damp hair and scrunch gently.'
-  },
-  {
-    id: 'hair-buzz-cut',
-    name: 'Precision Military Buzz Cut',
-    gender: 'boy',
-    category: 'short',
-    tags: ['Short', 'Buzz', 'Minimalist'],
-    trending: false,
-    faceShapes: ['Square', 'Oval', 'Diamond'],
-    hairTexture: ['Straight', 'Wavy', 'Curly'],
-    maintenance: 'Low',
-    recommendedService: "Military Buzz & Edge Up",
-    duration: '25 mins',
-    price: 40,
-    description: 'Ultra-clean uniform short clipper cut with razor-sharp temple lines.',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Keep scalp moisturized with light argan hair serum.'
-  },
-
-  // ─── WOMEN'S STYLES ───
-  {
-    id: 'hair-layered-balayage',
-    name: 'Long Butterfly Layers & Balayage',
-    gender: 'girl',
-    category: 'long',
-    tags: ['Long', 'Layers', 'Balayage', 'Volume'],
-    trending: true,
-    faceShapes: ['Oval', 'Round', 'Square', 'Heart'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'High',
-    recommendedService: "Master Cut & Sun-Kissed Balayage",
-    duration: '90 mins',
-    price: 180,
-    description: 'Feathered face-framing butterfly layers with soft cascading waves and sun-kissed dimension.',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Blowout with a large ceramic round barrel brush for buoyant movement.'
-  },
-  {
-    id: 'hair-french-bob',
-    name: 'Chic Parisian French Bob',
-    gender: 'girl',
-    category: 'short',
-    tags: ['Short', 'Bob', 'French', 'Chic'],
-    trending: true,
-    faceShapes: ['Oval', 'Heart', 'Diamond'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'Medium',
-    recommendedService: "Signature French Bob & Texture",
-    duration: '60 mins',
-    price: 90,
-    description: 'Jawline-skimming blunt bob accompanied by soft brow-grazing curtain bangs.',
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Tuck one side behind the ear to highlight the jawline angle.'
-  },
-  {
-    id: 'hair-beach-waves',
-    name: 'Textured Mermaid Beach Waves',
-    gender: 'girl',
-    category: 'long',
-    tags: ['Long', 'Wavy', 'Beach Waves', 'Effortless'],
-    trending: true,
-    faceShapes: ['Oval', 'Square', 'Oblong'],
-    hairTexture: ['Wavy', 'Straight'],
-    maintenance: 'Medium',
-    recommendedService: "Thermal Styling & Beach Texture",
-    duration: '50 mins',
-    price: 75,
-    description: 'Undone, relaxed S-pattern waves with textured ends for romantic, bohemian flair.',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Alternate curl direction with a 1.25-inch curling iron and finish with texture spray.'
-  },
-  {
-    id: 'hair-textured-pixie',
-    name: 'Edgy Whispy Pixie Cut',
-    gender: 'girl',
-    category: 'short',
-    tags: ['Short', 'Pixie', 'Feathered', 'Bold'],
-    trending: false,
-    faceShapes: ['Oval', 'Heart', 'Square'],
-    hairTexture: ['Straight', 'Wavy'],
-    maintenance: 'Medium',
-    recommendedService: "Sculpted Pixie Cut & Styling",
-    duration: '50 mins',
-    price: 80,
-    description: 'Cropped closely at nape with longer, feathered crown layers creating dimensional lift.',
-    image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Piece out ends with dry texture wax for an effortless look.'
-  },
-  {
-    id: 'hair-glass-hair',
-    name: 'Glossy Mid-Length Glass Hair',
-    gender: 'girl',
-    category: 'medium',
-    tags: ['Medium', 'Straight', 'Gloss', 'Sleek'],
-    trending: true,
-    faceShapes: ['Round', 'Heart', 'Oval'],
-    hairTexture: ['Straight'],
-    maintenance: 'Medium',
-    recommendedService: "Keratin Gloss & Silk Press",
-    duration: '75 mins',
-    price: 130,
-    description: 'Mirror-shine blunt lob falling just above the collarbones with ultra-smooth reflection.',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Apply lightweight heat protectant oil before flat-ironing in small sections.'
-  },
-  {
-    id: 'hair-curly-shag',
-    name: '70s Retro Curly Shag',
-    gender: 'girl',
-    category: 'curly',
-    tags: ['Curly', 'Shag', 'Retro', 'Volume'],
-    trending: true,
-    faceShapes: ['Oval', 'Oblong', 'Heart'],
-    hairTexture: ['Curly'],
-    maintenance: 'Medium',
-    recommendedService: "Dry Curly Carve & Diffuse",
-    duration: '60 mins',
-    price: 95,
-    description: 'Choppy short crown layers with curl-embracing curtain bangs for maximum body and bounce.',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Diffuse upside down until 90% dry for massive retro root volume.'
-  }
-];
-
-export const HAIR_COLORS = [
-  { id: 'original', name: 'Natural / Match Mine', hex: 'transparent', description: 'Keeps your authentic hair tone' },
-  { id: 'jet-black', name: 'Raven Black', hex: '#111116', description: 'Deep glossy blue-black' },
-  { id: 'dark-chocolate', name: 'Dark Chocolate', hex: '#2b1b17', description: 'Rich dark espresso brunette' },
-  { id: 'caramel-brown', name: 'Caramel Macchiato', hex: '#634433', description: 'Warm golden chestnut' },
-  { id: 'honey-blonde', name: 'Honey Wheat Blonde', hex: '#b3905e', description: 'Sunlit warm golden tones' },
-  { id: 'platinum-ice', name: 'Nordic Platinum', hex: '#dedad2', description: 'High-lift cool silver blonde' },
-  { id: 'copper-auburn', name: 'Sunset Auburn', hex: '#8c3a27', description: 'Fiery copper cinnamon' },
-  { id: 'burgundy-wine', name: 'Bordeaux Burgundy', hex: '#4e1124', description: 'Deep jewel ruby red' },
-  { id: 'rose-gold', name: 'Pastel Rose Gold', hex: '#b87c7e', description: 'Shimmering blush metallic' },
-  { id: 'ash-gray', name: 'Smokey Titanium', hex: '#7a7a85', description: 'Modern cool matte slate' },
-];
+// StyleSync AI Beauty Studio - Master Dataset
+// Rich, curated catalogue for Hair, Skin, Nail, Makeup, and Grooming Studios
 
 export const FACE_SHAPES = [
   {
     id: 'Oval',
-    name: 'Oval',
-    description: 'Balanced symmetry with forehead slightly wider than chin and soft curved jawline.',
-    bestStyles: ['Low Fade', 'Textured Crop', 'French Bob', 'Butterfly Layers'],
-    avoidTips: 'Heavy blunt bangs that hide the balanced face length.'
+    name: 'Oval Face Shape',
+    ratio: '1:1.5 Balanced Ratio',
+    description: 'Even proportions, softly curved jawline, and forehead slightly wider than the chin. Highly versatile.',
+    bestStyles: ['Layered Waves', 'Textured Crop', 'Side Part Bob', 'Classic Fade', 'Sleek Lob'],
+    avoidTips: 'Avoid heavy blunt bangs that unnecessarily shorten balanced facial symmetry.',
+    groomingAdvice: 'Clean stubble or balanced short boxed beard maintains natural symmetry.'
   },
   {
     id: 'Round',
-    name: 'Round',
-    description: 'Similar width and length with soft curved jawline and full cheeks.',
-    bestStyles: ['Pompadour', 'High Skin Fade', 'Long Layered Waves', 'Asymmetrical Bob'],
-    avoidTips: 'Chin-length round bobs that accentuate fullness.'
+    name: 'Round Face Shape',
+    ratio: '1:1 Soft Contour',
+    description: 'Equal width and length with soft, rounded cheeks and curved jawline.',
+    bestStyles: ['High Volume Pompadour', 'Long Layered Cut', 'Side-Swept Bangs', 'Vertical Quiff', 'Asymmetric Lob'],
+    avoidTips: 'Avoid chin-length blunt cuts or wide afro bobs that add horizontal bulk.',
+    groomingAdvice: 'Angular goatee or chin-strap beard creates lengthening definition.'
   },
   {
     id: 'Square',
-    name: 'Square',
-    description: 'Strong, defined angular jawline with proportional forehead width.',
-    bestStyles: ['Messy Textured Crop', 'Soft Waves', 'Side-Swept Undercut', 'Curtain Bangs'],
-    avoidTips: 'Ultra-blunt geometric cuts that over-accentuate jaw sharpness.'
+    name: 'Square Face Shape',
+    ratio: '1:1 Angular Contour',
+    description: 'Strong, defined jawline and broad forehead with sharp angular bone structure.',
+    bestStyles: ['Textured French Crop', 'Soft Shag', 'Side Swept Undercut', 'Curtain Bangs', 'Wavy Mid-Length'],
+    avoidTips: 'Avoid sharp geometric bobs or slick-backed flat styles that over-emphasize jaw width.',
+    groomingAdvice: 'Softened full beard or short tapered stubble softens prominent jaw corners.'
   },
   {
     id: 'Heart',
-    name: 'Heart',
-    description: 'Wider forehead tapering into a pointed, delicate chin.',
-    bestStyles: ['French Bob', 'Mid Taper Fade', 'Shoulder Lob', 'Side Fringe'],
-    avoidTips: 'Slicked back styles that add height without framing the lower face.'
+    name: 'Heart Face Shape',
+    ratio: 'Wide Brow, Narrow Chin',
+    description: 'Broad forehead tapering down to a delicate, pointed chin.',
+    bestStyles: ['Collarbone Lob', 'Textured Curtain Bangs', 'Medium Wavy Shag', 'Side Part Fringe', 'Chin Length Bob'],
+    avoidTips: 'Avoid heavy top volume without lower width; balance is needed at the chin line.',
+    groomingAdvice: 'Fuller beard along the jaw and chin balances upper face width.'
   },
   {
     id: 'Diamond',
-    name: 'Diamond',
-    description: 'Narrow forehead and jawline with dramatic, prominent cheekbones.',
-    bestStyles: ['Curly Drop Undercut', 'Whispy Pixie', 'Chin-Length Waves'],
-    avoidTips: 'Excessive volume on the sides right at the cheekbones.'
+    name: 'Diamond Face Shape',
+    ratio: 'Prominent Cheekbones',
+    description: 'Narrow forehead and chin with high, dramatic cheekbones.',
+    bestStyles: ['Chin-Length Bob', 'Textured Waves', 'Deep Side Part', 'Wispy Bangs', 'Medium Layered Shag'],
+    avoidTips: 'Avoid excessive width at the cheekbone line; add volume at forehead or jawline.',
+    groomingAdvice: 'Neat boxed beard fills out the narrower jawline.'
   },
   {
     id: 'Oblong',
-    name: 'Oblong',
-    description: 'Face is noticeably longer than it is wide, with straight cheek line.',
-    bestStyles: ['Textured Crop', 'Curtain Bangs', 'Layered Shag', 'Side Part Lob'],
-    avoidTips: 'Extreme sky-high pompadours that lengthen the silhouette.'
+    name: 'Oblong / Rectangular Face Shape',
+    ratio: 'Longer than Wide',
+    description: 'Long vertical face plane with uniform width across forehead, cheekbones, and jaw.',
+    bestStyles: ['Voluminous Waves', 'Full Fringe / Bangs', 'Side Part Medium Bob', 'Textured Crop', 'Curly Lob'],
+    avoidTips: 'Avoid towering pompadours or long pin-straight hair that elongates face further.',
+    groomingAdvice: 'Fuller sideburns and wider mustache add horizontal visual balance.'
   }
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. SKIN STUDIO DATA
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const SKIN_TYPES = [
-  { id: 'normal', name: 'Normal / Balanced', description: 'Well-balanced sebum and moisture with smooth texture and minimal redness.' },
-  { id: 'dry', name: 'Dry / Dehydrated', description: 'Low moisture retention, tight sensation, fine flakes, or dull complexion.' },
-  { id: 'oily', name: 'Oily / Sebum-Prone', description: 'Elevated shine in the T-zone, enlarged pores, and active oil production.' },
-  { id: 'combination', name: 'Combination', description: 'Oily forehead and nose with balanced or dry cheeks and perimeter.' },
-  { id: 'sensitive', name: 'Sensitive / Reactive', description: 'Prone to localized redness, heat sensation, barrier weakness, or irritation.' },
-];
-
-export const SKIN_CONCERNS = [
-  { id: 'hydration', name: 'Deep Hydration & Barrier', icon: 'Droplets', description: 'Infuse plumping moisture and restore cellular lipid barrier.' },
-  { id: 'glow', name: 'Dullness & Radiance', icon: 'Sparkles', description: 'Buff away dead epidermal cells and reveal illuminated skin tone.' },
-  { id: 'tan', name: 'Sun Damage & Anti-Tan', icon: 'Sun', description: 'Reverse pigmentation, brighten dark patches, and balance skin tone.' },
-  { id: 'pores', name: 'Enlarged Pores & Texture', icon: 'Maximize', description: 'Refine skin surface roughness with gentle enzymatic exfoliation.' },
-  { id: 'antiaging', name: 'Fine Lines & Firming', icon: 'Clock', description: 'Boost natural collagen production and improve skin bounce.' }
-];
-
-export const SKIN_TREATMENT_SERVICES = [
+export const HAIRSTYLES = [
+  // ── Women / Long / Medium / Short ──────────────────────────────────────────
   {
-    id: 'skin-hydra-glow',
-    title: 'Hydra-Infusion Glow Facial',
-    category: 'Skin Care',
-    duration: '60 mins',
-    price: 85,
-    description: 'Multi-step vortex suction cleansing, hyaluronic acid infusion, and oxygen misting for immediate radiant glow.',
-    idealFor: ['Dry', 'Normal', 'Combination'],
-    image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=700&q=80'
+    id: 'w-long-layered-waves',
+    name: 'Voluminous Butterfly Layers',
+    gender: 'women',
+    length: 'long',
+    texture: 'wavy',
+    faceShapes: ['Oval', 'Square', 'Oblong', 'Heart'],
+    description: 'Cascading butterfly layers designed for maximum bounce, movement, and face-framing softness.',
+    stylistTip: 'Blow-dry with a 45mm round ceramic brush and finish with lightweight texturizing mist.',
+    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 6-8 weeks',
+    tags: ['Popular', 'Trending', 'Glamour']
   },
   {
-    id: 'skin-ayur-detox',
-    title: 'Ayurvedic Kumkumadi Botanical Facial',
-    category: 'Skin Care',
-    duration: '75 mins',
-    price: 95,
-    description: 'Saffron-infused kumkumadi tailam facial massage, sandalwood herbal pack, and lymphatic marma stimulation.',
-    idealFor: ['Normal', 'Combination', 'Sensitive'],
-    image: 'https://images.unsplash.com/photo-1512290900672-1f02e7ad0ecb?auto=format&fit=crop&w=700&q=80'
+    id: 'w-french-bob',
+    name: 'Classic French Bob & Fringe',
+    gender: 'women',
+    length: 'short',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Heart', 'Diamond'],
+    description: 'Chic Parisian chin-skimming bob paired with wispy eyebrow-grazing fringe.',
+    stylistTip: 'Air dry with a drop of argan hair serum for understated effortless Parisian sheen.',
+    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 4-5 weeks',
+    tags: ['Classic', 'Chic']
   },
   {
-    id: 'skin-anti-tan',
-    title: 'Bio-Enzyme Anti-Tan Treatment',
-    category: 'Skin Care',
-    duration: '45 mins',
-    price: 65,
-    description: 'Papaya enzyme de-tan pack followed by vitamin C serum iontophoresis to brighten hyperpigmentation.',
-    idealFor: ['Oily', 'Combination', 'Normal'],
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80'
+    id: 'w-curtain-bangs-lob',
+    name: 'Textured Lob with Curtain Bangs',
+    gender: 'women',
+    length: 'medium',
+    texture: 'wavy',
+    faceShapes: ['Oval', 'Round', 'Square', 'Heart', 'Diamond'],
+    description: 'Shoulder-grazing textured long bob featuring soft 70s-inspired cheekbone curtain bangs.',
+    stylistTip: 'Pinch curtain bangs at the cheekbone peak while diffusing for instant contouring.',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 6 weeks',
+    tags: ['Most Loved', 'Versatile']
   },
   {
-    id: 'skin-deep-pore',
-    title: 'Charcoal Deep Pore Refining Cleanse',
-    category: 'Skin Care',
-    duration: '50 mins',
-    price: 70,
-    description: 'Ultrasonic blackhead extraction, active activated bamboo charcoal mask, and cold hammer pore tightening.',
-    idealFor: ['Oily', 'Combination'],
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80'
+    id: 'w-curly-shag',
+    name: 'Modern Defined Curly Shag',
+    gender: 'women',
+    length: 'medium',
+    texture: 'curly',
+    faceShapes: ['Oval', 'Square', 'Heart', 'Diamond'],
+    description: 'Dynamic multi-layered shag specifically shaped for natural curly and coily volume.',
+    stylistTip: 'Apply curl defining cream on soaking wet hair using the praying-hands method.',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 8 weeks',
+    tags: ['Natural Texture', 'Volume']
+  },
+  {
+    id: 'w-sleek-glass-hair',
+    name: 'Ultra-Sleek Glass Hair',
+    gender: 'women',
+    length: 'long',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Round', 'Heart'],
+    description: 'Precision one-length long cut polished to high-reflective mirror glass gloss.',
+    stylistTip: 'Requires heat protector and keratin smoothing booster before ceramic pass.',
+    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Smooth treatment every 3 months',
+    tags: ['Luxury', 'Minimalist']
+  },
+  {
+    id: 'w-pixie-crop',
+    name: 'Textured Pixie Crop',
+    gender: 'women',
+    length: 'short',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Heart', 'Diamond'],
+    description: 'Bold feminine pixie with feathered crown texture and soft tapered nape.',
+    stylistTip: 'Style with matte styling paste worked through fingers for piecey definition.',
+    image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 3-4 weeks',
+    tags: ['Bold', 'Low Maintenance']
+  },
+
+  // ── Men / Grooming / Short / Medium ────────────────────────────────────────
+  {
+    id: 'm-textured-crop-fade',
+    name: 'Textured Crop with Mid Skin Fade',
+    gender: 'men',
+    length: 'short',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Square', 'Round', 'Diamond'],
+    description: 'Contemporary European textured French crop paired with precision blurry mid skin fade.',
+    stylistTip: 'Dust lightweight matte styling powder into roots and scrunch with fingertips.',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Fade cleanup every 2-3 weeks',
+    tags: ['Top Trend', 'Low Maintenance']
+  },
+  {
+    id: 'm-classic-pompadour',
+    name: 'Royal Executive Pompadour',
+    gender: 'men',
+    length: 'medium',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Round', 'Square'],
+    description: 'High-lift sculpted pompadour tapering neatly down to blended scissor-over-comb sides.',
+    stylistTip: 'Pre-style with sea salt spray and lock the front quiff using water-soluble medium pomade.',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 3-4 weeks',
+    tags: ['Executive', 'Polished']
+  },
+  {
+    id: 'm-wavy-curtains',
+    name: '90s Flow Wavy Middle Part',
+    gender: 'men',
+    length: 'medium',
+    texture: 'wavy',
+    faceShapes: ['Oval', 'Heart', 'Diamond', 'Square'],
+    description: 'Relaxed center-parted layered curtain flow with natural ear-tucking movement.',
+    stylistTip: 'Apply lightweight leave-in moisturizing conditioner and let dry naturally.',
+    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 6 weeks',
+    tags: ['Casual', 'Trending']
+  },
+  {
+    id: 'm-curly-taper-fade',
+    name: 'Textured Curly High Taper Fade',
+    gender: 'men',
+    length: 'short',
+    texture: 'curly',
+    faceShapes: ['Oval', 'Square', 'Oblong'],
+    description: 'High volume defined natural curl canopy with ultra-clean temple and neckline tapers.',
+    stylistTip: 'Hydrate with curl foam and avoid comb brushing when dry to prevent frizz.',
+    image: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Taper refresh every 2 weeks',
+    tags: ['Definition', 'Sharp']
+  },
+  {
+    id: 'm-buzz-lineup',
+    name: 'Military Buzz Cut & Razor Lineup',
+    gender: 'men',
+    length: 'short',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Square', 'Diamond'],
+    description: 'Ultra-clean #2 clipper uniform buzz finished with laser-sharp straight razor edge work.',
+    stylistTip: 'Maintain with daily scalp moisturizer and SPF 50 sunscreen.',
+    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 2 weeks',
+    tags: ['Ultra Sharp', 'Athletic']
+  },
+  {
+    id: 'm-side-part-fade',
+    name: 'Modern Side Part Gentleman Taper',
+    gender: 'men',
+    length: 'short',
+    texture: 'straight',
+    faceShapes: ['Oval', 'Square', 'Oblong', 'Heart'],
+    description: 'Timeless tailored gentleman side parting with clean tapered sides and natural shine.',
+    stylistTip: 'Comb through with styling cream when damp for a sophisticated all-day hold.',
+    image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=700&q=80',
+    maintenance: 'Trim every 3 weeks',
+    tags: ['Business', 'Classic']
   }
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. NAIL STUDIO DATA
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const NAIL_SHAPES = [
-  { id: 'almond', name: 'Almond', description: 'Tapered sides that round off at the tip, elongating fingers elegantly.' },
-  { id: 'coffin', name: 'Coffin / Ballerina', description: 'Tapered edges ending in a blunt square tip; modern high-fashion favorite.' },
-  { id: 'square', name: 'Classic Square', description: 'Straight edges with a clean horizontal tip; timeless and durable.' },
-  { id: 'oval', name: 'Graceful Oval', description: 'Soft natural curved edge following the fingertip contour.' },
-  { id: 'stiletto', name: 'Stiletto', description: 'Dramatic, sharply pointed apex for bold statement nail styling.' },
-  { id: 'squoval', name: 'Squoval', description: 'Square shape with rounded softened corners; universally flattering.' },
+export const HAIR_COLORS = [
+  { id: 'original', name: 'Natural / Match Mine', hex: 'transparent', description: 'Keeps your authentic hair color' },
+  { id: 'espresso-black', name: 'Midnight Espresso', hex: '#120f0d', description: 'Deep, rich black with glossy obsidian sheen' },
+  { id: 'chestnut-brown', name: 'Chestnut Brown', hex: '#4a2c1d', description: 'Warm cocoa undertones with soft amber reflections' },
+  { id: 'honey-blonde', name: 'Golden Honey Blonde', hex: '#d4af37', description: 'Sun-drenched dimensional blonde highlights' },
+  { id: 'platinum-silver', name: 'Ice Platinum Silver', hex: '#e2e8f0', description: 'Ultra-cool Nordic metallic icy shimmer' },
+  { id: 'burgundy-wine', name: 'Royal Burgundy Wine', hex: '#6b172a', description: 'Deep jewel-toned red velvet formulation' },
+  { id: 'copper-auburn', name: 'Spiced Copper Auburn', hex: '#9c411e', description: 'Vibrant autumnal ginger copper vibrancy' },
+  { id: 'rose-gold', name: 'Blush Rose Gold', hex: '#b76e79', description: 'Subtle pastel rose woven with champagne gold' }
 ];
 
-export const NAIL_COLORS = [
-  { id: 'cherry-rouge', name: 'Cherry Rouge', hex: '#8a0f28', finish: 'Gloss' },
-  { id: 'nude-cashmere', name: 'Nude Cashmere', hex: '#d9baa2', finish: 'Cream' },
-  { id: 'french-white', name: 'French Tip White', hex: '#fdfbf7', finish: 'Pure' },
-  { id: 'noir-velvet', name: 'Midnight Noir', hex: '#16161a', finish: 'Matte' },
-  { id: 'chrome-silver', name: 'Glazed Chrome', hex: '#d5dae2', finish: 'Chrome' },
-  { id: 'emerald-gem', name: 'Imperial Emerald', hex: '#0f402c', finish: 'Metallic' },
-  { id: 'lavender-mist', name: 'Lavender Mist', hex: '#b7a8c4', finish: 'Pastel' },
-  { id: 'terracotta-spice', name: 'Terracotta Clay', hex: '#a6563d', finish: 'Gloss' },
-  { id: 'gold-foil', name: 'Champagne Foil', hex: '#d4af37', finish: 'Glitter' },
-  { id: 'coral-sunset', name: 'Living Coral', hex: '#e86f56', finish: 'Gloss' },
+export const SKIN_CARE_METRICS = [
+  { key: 'redness', label: 'Redness / Sensitivity', unit: '%', optimal: 'Low', desc: 'Indicates vascular response, skin barrier irritation, or flush tone' },
+  { key: 'oiliness', label: 'Sebum / Oil Balance', unit: '%', optimal: 'Balanced', desc: 'Specular reflectance across forehead and T-zone pore areas' },
+  { key: 'texture', label: 'Skin Texture Smoothness', unit: '%', optimal: 'High', desc: 'Evenness of microscopic facial surface and stratum corneum' },
+  { key: 'pores', label: 'Pore Refinement Index', unit: '%', optimal: 'Refined', desc: 'Visible density of enlarged follicular openings around nose/cheeks' },
+  { key: 'hydration', label: 'Hydration & Barrier Plump', unit: '%', optimal: 'High', desc: 'Optical bounce and epidermal water retention level' }
+];
+
+export const NAIL_SHADES = [
+  { id: 'crimson-ruby', name: 'Ruby Glam Red', hex: '#990011', finish: 'High Gloss Gel' },
+  { id: 'ballet-slipper', name: 'Ballet Nude', hex: '#f4e4dd', finish: 'Sheer Gel' },
+  { id: 'glazed-chrome', name: 'Hailey Glazed Chrome', hex: '#e8e8ed', finish: 'Mirror Chrome' },
+  { id: 'french-white', name: 'French Tip Ivory', hex: '#fdfbf7', finish: 'Solid Creme' },
+  { id: 'velvet-plum', name: 'Midnight Plum', hex: '#3b122d', finish: 'Velvet Matte' },
+  { id: 'sage-pastel', name: 'Soft Sage Matcha', hex: '#a8bfa8', finish: 'Pastel Creme' },
+  { id: 'gold-shimmer', name: 'Champagne Glitter', hex: '#d1b26f', finish: 'Micro-Glitter' },
+  { id: 'noir-matte', name: 'Obsidian Noir', hex: '#171717', finish: 'Satin Matte' }
 ];
 
 export const NAIL_DESIGNS = [
   {
-    id: 'design-glazed-donut',
-    name: 'Hailey Glazed Chrome',
-    shape: 'Almond',
-    color: '#d5dae2',
-    style: 'Chrome Sheen',
-    description: 'Iridescent pearl chrome powder buffed over neutral milky base for glassy reflection.',
-    image: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=700&q=80'
+    id: 'french-minimal',
+    name: 'Micro French Minimalist',
+    image: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=600&q=80',
+    description: 'Ultra-thin modern French smile lines on a clean neutral sheer base.',
+    serviceCategory: 'Manicure'
   },
   {
-    id: 'design-french-ombre',
-    name: 'French Baby Boomer Ombré',
-    shape: 'Coffin',
-    color: '#fdfbf7',
-    style: 'Gradient Fade',
-    description: 'Seamless gradient fade from sheer rosy pink cuticle to crisp milky white tip.',
-    image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=700&q=80'
+    id: 'chrome-donut',
+    name: 'Glazed Donut Pearl Chrome',
+    image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80',
+    description: 'Iridescent pearl powder rubbed over creamy porcelain gel.',
+    serviceCategory: 'Gel Extensions'
   },
   {
-    id: 'design-minimal-gold',
-    name: 'Minimalist Micro-French & Gold Foil',
-    shape: 'Squoval',
-    color: '#d4af37',
-    style: 'Fine Art',
-    description: 'Ultra-thin modern metallic edge with delicate gold leaf accent foil.',
-    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=700&q=80'
+    id: 'ombre-blush',
+    name: 'Rosewater Ombré Fade',
+    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80',
+    description: 'Soft seamless gradient melting from sheer blush root to milky white tip.',
+    serviceCategory: 'Nail Art'
   },
   {
-    id: 'design-deep-ruby',
-    name: 'Vampire Red Velvet Matte',
-    shape: 'Almond',
-    color: '#8a0f28',
-    style: 'Matte Glam',
-    description: 'Sultry Bordeaux dark cherry coated in velvet-touch matte topcoat.',
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80'
+    id: 'gold-foil-accent',
+    name: 'Artisan Gold Leaf Accents',
+    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
+    description: 'Hand-placed 24k gold leaf flakes embedded in crystal clear builder gel.',
+    serviceCategory: 'Luxury Nail Art'
   }
 ];
-
-export const NAIL_SERVICES = [
-  {
-    id: 'nail-spa-mani',
-    title: 'Luxury Gel Spa Manicure',
-    duration: '45 mins',
-    price: 45,
-    description: 'Cuticle restoration, organic apricot scrub, hand massage, and long-lasting UV LED gel lacquer.'
-  },
-  {
-    id: 'nail-ext-sculpt',
-    title: 'Sculpted Gel Extensions & Custom Art',
-    duration: '80 mins',
-    price: 90,
-    description: 'Full set lightweight builder gel extension with custom shape sculpt and 2 accent nail art designs.'
-  },
-  {
-    id: 'nail-pedi-deluxe',
-    title: 'Aromatherapy Reflexology Pedicure',
-    duration: '55 mins',
-    price: 55,
-    description: 'Epsom salt foot soak, callus buffing, hot towel wrap, acupressure massage, and high-shine polish.'
-  }
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. MAKEUP STUDIO DATA
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const MAKEUP_LOOKS = [
   {
-    id: 'look-bridal-royal',
-    name: 'Royal Heritage Bridal Glam',
-    occasion: 'Wedding / Festive',
-    description: 'Sculpted high-definition base, warm gold shimmer lid, winged eyeliner, and regal crimson lip.',
+    id: 'clean-girl-glow',
+    name: 'Clean Girl Soft Glow',
+    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=700&q=80',
+    description: 'Dewy skin tint, feathery brushed brows, soft cream rose blush, and glass lip oil.',
+    lipstick: { name: 'Glossy Rose Nude', hex: '#cf7a7a' },
+    blush: { name: 'Dewy Peachy Pink', hex: '#f28e8e' }
+  },
+  {
+    id: 'red-carpet-glam',
+    name: 'Classic Hollywood Crimson Glam',
     image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=700&q=80',
-    lipColor: '#8f1527',
-    blushColor: '#c85d68',
-    recommendedService: 'Bridal Couture Makeup & Hair'
+    description: 'Velvet matte red lips, winged feline eyeliner, sculpted contour, and satin skin.',
+    lipstick: { name: 'Ruby Velvet Crimson', hex: '#b00b28' },
+    blush: { name: 'Warm Terracotta Contour', hex: '#b56551' }
   },
   {
-    id: 'look-natural-dewy',
-    name: 'Clean Girl Dewy Glass Finish',
-    occasion: 'Daywear / Cocktail',
-    description: 'Sheer luminous skin tint, flushed apricot cheeks, brushed-up soap brows, and glazed nude lip.',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80',
-    lipColor: '#c4826d',
-    blushColor: '#e07d6a',
-    recommendedService: 'Natural Dewy Glow Makeover'
-  },
-  {
-    id: 'look-smokey-evening',
-    name: 'Velvet Smokey Sunset',
-    occasion: 'Evening / Red Carpet',
-    description: 'Soft-diffused bronze and espresso eyeshadow, chiselled contour, and satin beige neutral lip.',
+    id: 'bridal-elegance',
+    name: 'Luxe Champagne Bridal',
     image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=700&q=80',
-    lipColor: '#965a50',
-    blushColor: '#a15555',
-    recommendedService: 'Red Carpet Evening Glamour'
+    description: 'Soft shimmering champagne lids, airbrushed complexion, and romantic dusty rose lips.',
+    lipstick: { name: 'Dusty Rose Petal', hex: '#c9787e' },
+    blush: { name: 'Subtle Rose Petal', hex: '#d98b96' }
   },
   {
-    id: 'look-festive-radiance',
-    name: 'Kerala Kasavu Festive Radiance',
-    occasion: 'Traditional / Onam / Pooja',
-    description: 'Kohl-rimmed defined eyes, golden champagne temple highlight, and traditional vermilion lip.',
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=700&q=80',
-    lipColor: '#b52233',
-    blushColor: '#b55a67',
-    recommendedService: 'Traditional Occasion Makeover'
+    id: 'smoky-bronze',
+    name: 'Smoky Bronze Sultry',
+    image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=700&q=80',
+    description: 'Smoky copper-bronze diffused eye gradient, chiseled cheekbones, and creamy warm nude lips.',
+    lipstick: { name: 'Warm Honeyed Nude', hex: '#ad6a52' },
+    blush: { name: 'Sun-Drenched Bronze', hex: '#9e5239' }
   }
 ];
 
-export const LIP_SHADES = [
-  { id: 'lip-crimson', name: 'Regal Crimson', hex: '#94192b', opacity: 0.65 },
-  { id: 'lip-nude-satin', name: 'Warm Cashmere Nude', hex: '#be7d68', opacity: 0.60 },
-  { id: 'lip-berry-velvet', name: 'Blackberry Velvet', hex: '#631831', opacity: 0.70 },
-  { id: 'lip-coral-pop', name: 'Summer Coral', hex: '#cf5a48', opacity: 0.65 },
-  { id: 'lip-pink-rose', name: 'Dusty English Rose', hex: '#ba6075', opacity: 0.60 },
-  { id: 'lip-plum-noir', name: 'Spiced Plum', hex: '#542232', opacity: 0.70 },
+export const LIPSTICK_SHADES = [
+  { id: 'crimson-ruby', name: 'Ruby Velvet Crimson', hex: '#9e1329', finish: 'Matte' },
+  { id: 'dusty-rose', name: 'Dusty Rose Petal', hex: '#c9787e', finish: 'Satin' },
+  { id: 'nude-mocha', name: 'Mocha Warm Nude', hex: '#945c48', finish: 'Cream' },
+  { id: 'berry-plum', name: 'Deep Royal Plum', hex: '#631d38', finish: 'Velvet' },
+  { id: 'peach-coral', name: 'Sun Coral Glow', hex: '#e07663', finish: 'Gloss' }
 ];
 
 export const BLUSH_SHADES = [
-  { id: 'blush-peach', name: 'Sweet Apricot', hex: '#e88264', opacity: 0.35 },
-  { id: 'blush-rose', name: 'Petal Rose', hex: '#d96a84', opacity: 0.35 },
-  { id: 'blush-coral', name: 'Golden Amber', hex: '#c76b4a', opacity: 0.35 },
-  { id: 'blush-berry', name: 'Berry Flush', hex: '#9e4359', opacity: 0.30 },
+  { id: 'peachy-pink', name: 'Soft Peachy Pink', hex: '#f08080' },
+  { id: 'dusty-rose', name: 'Rosewood Mauve', hex: '#c08081' },
+  { id: 'warm-terracotta', name: 'Warm Terracotta', hex: '#c86d51' },
+  { id: 'berry-flush', name: 'Fresh Berry Flush', hex: '#b24c63' }
 ];
-
-export const EYE_SHADES = [
-  { id: 'eye-champagne', name: 'Champagne Shimmer', hex: '#d4af72', opacity: 0.40 },
-  { id: 'eye-bronze', name: 'Metallic Bronze', hex: '#87532a', opacity: 0.50 },
-  { id: 'eye-smokey', name: 'Smokey Charcoal', hex: '#262629', opacity: 0.55 },
-  { id: 'eye-rose', name: 'Rose Quartz', hex: '#b36c7a', opacity: 0.45 },
-];
-
-export const MAKEUP_SERVICES = [
-  {
-    id: 'mu-bridal',
-    title: 'Signature Bridal Makeover & Draping',
-    duration: '120 mins',
-    price: 250,
-    description: 'Airbrush HD foundation, waterproof long-wear cosmetics, eyelash extensions, and sari/veil draping.'
-  },
-  {
-    id: 'mu-party',
-    title: 'Party & Cocktail Glam Makeup',
-    duration: '60 mins',
-    price: 90,
-    description: 'Custom tailored evening look with contoured base, custom eye pigments, and long-wear setting mist.'
-  },
-  {
-    id: 'mu-editorial',
-    title: 'Personalized Beauty Consultation & Makeover',
-    duration: '75 mins',
-    price: 110,
-    description: 'Facial anatomy assessment, personalized color matching session, and full event-ready application.'
-  }
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. GROOMING STUDIO DATA
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const GROOMING_STYLES = [
   {
-    id: 'groom-executive-fade',
-    name: 'Executive Fade Beard',
-    faceShapes: ['Round', 'Square', 'Oval'],
-    maintenance: 'Low',
-    tags: ['Tapered', 'Clean', 'Professional'],
-    description: 'Seamless gradient from sideburns into a sharply sculpted, medium-density beard along the jawline.',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Maintain with weekly razor lineup and hydrating cedarwood beard oil.'
+    id: 'crisp-heavy-stubble',
+    name: 'Designer 3-Day Heavy Stubble',
+    faceShapes: ['Oval', 'Square', 'Round', 'Oblong', 'Heart', 'Diamond'],
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=700&q=80',
+    description: '3mm uniform designer stubble with sharp cheek line fading and tidy neck boundary.',
+    stylistAdvice: 'Exfoliate twice weekly and apply lightweight beard oil to soften bristle tips.',
+    serviceName: 'Beard Trim & Lineup'
   },
   {
-    id: 'groom-designer-stubble',
-    name: '3-Day Heavy Designer Stubble',
-    faceShapes: ['Oval', 'Heart', 'Diamond', 'Square'],
-    maintenance: 'Low',
-    tags: ['Stubble', 'Rugged', 'Effortless'],
-    description: 'Uniform 3mm stubble providing natural shadow and definition across the cheekbones and chin.',
+    id: 'short-boxed-beard',
+    name: 'Sculpted Short Boxed Beard',
+    faceShapes: ['Oval', 'Round', 'Heart', 'Diamond'],
     image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Trim twice weekly at 2.5mm and line the neck two fingers above the Adam’s apple.'
+    description: 'Neatly cropped 10-12mm beard sculpted into square masculine angles along the jaw.',
+    stylistAdvice: 'Comb downward daily and trim mustache clear of upper lip border.',
+    serviceName: 'Royal Beard Sculpt & Trim'
   },
   {
-    id: 'groom-anchor-goatee',
-    name: 'Sculpted Anchor Goatee',
-    faceShapes: ['Round', 'Square'],
-    maintenance: 'Medium',
-    tags: ['Goatee', 'Angular', 'Sculpted'],
-    description: 'Pointed chin beard tracing the jawline paired with a clean detached pencil moustache.',
+    id: 'classic-full-beard',
+    name: 'Executive Classic Full Beard',
+    faceShapes: ['Oval', 'Oblong', 'Square'],
+    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=80',
+    description: 'Thick, healthy, full-bodied beard meticulously shaped with tapering towards the neckline.',
+    stylistAdvice: 'Use deep conditioning beard butter and wooden boar-bristle brush.',
+    serviceName: 'Beard Spa & Steam Treatment'
+  },
+  {
+    id: 'sharp-goatee',
+    name: 'Precision Anchor Goatee',
+    faceShapes: ['Square', 'Round', 'Diamond'],
     image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Keep cheeks completely smooth to let the geometric anchor draw the eye downward.'
+    description: 'Distinct chin beard with connected or floating mustache and clean razor-shaved cheeks.',
+    stylistAdvice: 'Requires precision razor work every 3-4 days to keep cheeks glass smooth.',
+    serviceName: 'Hot Towel Razor Shave & Goatee Detail'
   },
   {
-    id: 'groom-full-lumberjack',
-    name: 'Full Majestic Nordic Beard',
-    faceShapes: ['Oval', 'Oblong', 'Diamond'],
-    maintenance: 'High',
-    tags: ['Full Beard', 'Voluminous', 'Bold'],
-    description: 'Dense, substantial beard grown to 2–3 inches, trimmed into a squared masculine silhouette.',
-    image: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Brush daily with a boar bristle brush and apply warm beard balm to condition roots.'
-  },
-  {
-    id: 'groom-clean-shave',
-    name: 'Royal Hot Towel Clean Shave',
-    faceShapes: ['Oval', 'Heart', 'Square', 'Round'],
-    maintenance: 'Low',
-    tags: ['Clean', 'Classic', 'Ultra-Smooth'],
-    description: 'Satin-smooth straight-razor shave with pre-shave oil infusion and cold towel pore sealing.',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=80',
-    stylistTip: 'Never skip aftershave balm with chamomile to prevent ingrown hairs.'
-  }
-];
-
-export const GROOMING_SERVICES = [
-  {
-    id: 'groom-royal-shave',
-    title: 'Master Royal Hot Towel Shave',
-    duration: '35 mins',
-    price: 45,
-    description: 'Double hot eucalyptus towel wrap, botanical lathering, feather-touch straight razor shave, and cooling alum treatment.'
-  },
-  {
-    id: 'groom-beard-sculpt',
-    title: 'Beard Sculpting, Taper & Razor Lineup',
-    duration: '30 mins',
-    price: 40,
-    description: 'Precision scissor debulking, clippers fade, razor cheek and neck contouring, and hot oil hydration.'
-  },
-  {
-    id: 'groom-combo-vip',
-    title: 'Signature Haircut + Royal Beard Treatment',
-    duration: '60 mins',
-    price: 85,
-    description: 'Complete transformation package: customized haircut, wash, styling, and complete beard sculpting spa.'
+    id: 'clean-shaven-gentleman',
+    name: 'Clean Shaven Royal Executive',
+    faceShapes: ['Oval', 'Diamond', 'Square', 'Heart', 'Oblong'],
+    image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=700&q=80',
+    description: 'Silky smooth hot-lather razor shave followed by cooling botanical pore astringent.',
+    stylistAdvice: 'Hot towel pre-treatment opens pores, preventing ingrown hairs and razor burn.',
+    serviceName: 'Signature Hot Towel Shave'
   }
 ];
