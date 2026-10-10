@@ -52,6 +52,9 @@ export const SalonProvider = ({ children }) => {
   // Admin sub-tab: 'dashboard' | 'home-requests' | 'services' | 'staff' | 'payments' | 'feedback'
   const [adminTab, setAdminTab] = useState('dashboard');
 
+  // Staff sub-tab: 'schedule' | 'tasks' | 'customers' | 'services' | 'reviews' | 'profile' | 'support' | 'chat'
+  const [staffTab, setStaffTab] = useState('schedule');
+
   // Persistent State Loaders with smart merging for new seed items
   const [services, setServices] = useState(() => {
     const saved = localStorage.getItem('stylesync_services');
@@ -157,6 +160,18 @@ export const SalonProvider = ({ children }) => {
           if (dbComplaints.length > 0) setComplaints(dbComplaints);
         }
 
+        // 8. Staff Attendance
+        const dbAttendance = await fetchCollection('staffAttendance');
+        if (dbAttendance !== null) {
+          if (dbAttendance.length > 0) setStaffAttendance(dbAttendance);
+        }
+
+        // 9. Leave Requests
+        const dbLeaves = await fetchCollection('leaveRequests');
+        if (dbLeaves !== null) {
+          if (dbLeaves.length > 0) setLeaveRequests(dbLeaves);
+        }
+
       } catch (error) {
         console.error("Failed to load collections from Firestore:", error);
       } finally {
@@ -193,6 +208,18 @@ export const SalonProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : INITIAL_FEEDBACK;
   });
 
+  // Staff Attendance State
+  const [staffAttendance, setStaffAttendance] = useState(() => {
+    const saved = localStorage.getItem('stylesync_staff_attendance');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Staff Leave Requests State
+  const [leaveRequests, setLeaveRequests] = useState(() => {
+    const saved = localStorage.getItem('stylesync_leave_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Sync to LocalStorage
   useEffect(() => {
     localStorage.setItem('stylesync_services', JSON.stringify(services));
@@ -222,6 +249,14 @@ export const SalonProvider = ({ children }) => {
     localStorage.setItem('stylesync_staff_messages', JSON.stringify(staffMessages));
   }, [staffMessages]);
 
+  useEffect(() => {
+    localStorage.setItem('stylesync_staff_attendance', JSON.stringify(staffAttendance));
+  }, [staffAttendance]);
+
+  useEffect(() => {
+    localStorage.setItem('stylesync_leave_requests', JSON.stringify(leaveRequests));
+  }, [leaveRequests]);
+
   const [complaints, setComplaints] = useState(() => {
     const saved = localStorage.getItem('stylesync_complaints');
     return saved ? JSON.parse(saved) : INITIAL_COMPLAINTS;
@@ -230,6 +265,45 @@ export const SalonProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('stylesync_complaints', JSON.stringify(complaints));
   }, [complaints]);
+
+  // Customer AI Hair Studio Favorites
+  const [hairFavorites, setHairFavorites] = useState(() => {
+    const saved = localStorage.getItem('stylesync_hair_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [prefilledBookingStyle, setPrefilledBookingStyle] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('stylesync_hair_favorites', JSON.stringify(hairFavorites));
+  }, [hairFavorites]);
+
+  const addHairFavorite = async (favoriteItem) => {
+    const itemWithUser = {
+      ...favoriteItem,
+      userId: currentUser?.uid || null,
+      userEmail: currentUser?.email || null,
+      savedAt: favoriteItem.savedAt || new Date().toISOString()
+    };
+    setHairFavorites(prev => {
+      const filtered = prev.filter(f => (f.id || f.styleId) !== (favoriteItem.id || favoriteItem.styleId));
+      return [itemWithUser, ...filtered];
+    });
+    try {
+      await addDocument('customer_hair_favorites', itemWithUser);
+    } catch (e) {
+      // Local fallback already saved
+    }
+  };
+
+  const removeHairFavorite = async (styleId) => {
+    setHairFavorites(prev => prev.filter(f => (f.id || f.styleId) !== styleId));
+    try {
+      await deleteDocument('customer_hair_favorites', styleId);
+    } catch (e) {
+      // Local fallback already saved
+    }
+  };
 
   // Actions & Operations
   const addBooking = async (newBookingData, paymentDetails) => {
@@ -416,14 +490,86 @@ export const SalonProvider = ({ children }) => {
 
   const updateStaffProfile = async (staffId, profileData) => {
     try {
-      await updateStaffInDB(staffId, profileData);
-      setStaff(prev => 
-        prev.map(s => s.id === staffId ? { ...s, ...profileData } : s)
-      );
+      const normalizedStaffId = staffId ? String(staffId) : (currentUser?.uid ? String(currentUser.uid) : `stf-${Date.now()}`);
+
+      // 1. Update in-memory staff state & stylesync_staff in localStorage
+      setStaff(prev => {
+        const idMatches = (s) => 
+          (s.id && String(s.id) === normalizedStaffId) ||
+          (currentUser?.uid && String(s.id) === String(currentUser.uid)) ||
+          (currentUser?.email && s.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+          (currentUser?.name && s.name && s.name.toLowerCase() === currentUser.name.toLowerCase());
+
+        const exists = prev.some(idMatches);
+        let updatedList;
+        if (exists) {
+          updatedList = prev.map(s => idMatches(s) ? { ...s, ...profileData } : s);
+        } else {
+          const newStaffEntry = {
+            id: normalizedStaffId,
+            name: profileData.name || currentUser?.name || 'Stylist Specialist',
+            email: currentUser?.email || '',
+            phone: profileData.phone || currentUser?.phone || '',
+            role: currentUser?.staffRole || profileData.specialty || 'Senior Stylist',
+            status: 'Available',
+            rating: 5.0,
+            homeServiceCertified: true,
+            approvalStatus: 'approved',
+            ...profileData
+          };
+          updatedList = [newStaffEntry, ...prev];
+        }
+        try {
+          localStorage.setItem('stylesync_staff', JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn("Could not save stylesync_staff to localStorage:", e);
+        }
+        return updatedList;
+      });
+
+      // 2. Synchronize currentUser in state and localStorage so avatar and details update app-wide
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          ...profileData,
+          ...(profileData.name ? { name: profileData.name } : {}),
+          ...(profileData.phone ? { phone: profileData.phone } : {}),
+          ...(profileData.avatar ? { avatar: profileData.avatar } : {}),
+        };
+        setCurrentUser(updatedUser);
+        try {
+          localStorage.setItem('stylesync_current_user', JSON.stringify(updatedUser));
+        } catch (storageErr) {
+          console.warn("Could not save updated currentUser to localStorage:", storageErr);
+        }
+      }
+
+      // 3. Persist to Firestore staff collection
+      await updateStaffInDB(normalizedStaffId, profileData);
+
+      return true;
     } catch(err) {
       console.error("Failed to update staff profile in DB", err);
-      throw err;
+      return false;
     }
+  };
+
+  // General profile updater for any logged in user
+  const updateUserProfile = async (updates) => {
+    if (!currentUser) return false;
+    const updatedUser = { ...currentUser, ...updates };
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem('stylesync_current_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.warn("Could not write currentUser to localStorage:", e);
+    }
+
+    if (currentUser.role === 'staff') {
+      const staffId = currentUser.uid || `stf-${currentUser.email || Date.now()}`;
+      await updateStaffProfile(staffId, updates);
+    }
+    return true;
   };
 
   // Remove a staff member from the active roster
@@ -517,6 +663,7 @@ export const SalonProvider = ({ children }) => {
 
     setCustomerTab('home');
     setAdminTab('dashboard');
+    setStaffTab('schedule');
   };
 
   const logoutUser = () => {
@@ -581,6 +728,107 @@ export const SalonProvider = ({ children }) => {
     }
   };
 
+  const markStaffAttendance = async ({ staffId, staffName, type, notes = '' }) => {
+    const today = new Date().toISOString().split('T')[0];
+    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const logId = `att_${staffId || 'staff'}_${today}`;
+
+    let updatedRecord;
+    setStaffAttendance(prev => {
+      const existingIndex = prev.findIndex(a => (a.staffId === staffId || a.staffName === staffName) && a.date === today);
+      if (existingIndex >= 0) {
+        const existing = prev[existingIndex];
+        updatedRecord = {
+          ...existing,
+          checkOutTime: type === 'check-out' ? nowTime : existing.checkOutTime,
+          status: type === 'check-out' ? 'Completed' : 'Present',
+          notes: notes || existing.notes,
+          updatedAt: new Date().toISOString()
+        };
+        const copy = [...prev];
+        copy[existingIndex] = updatedRecord;
+        return copy;
+      } else {
+        updatedRecord = {
+          id: logId,
+          staffId: staffId || `stf_${Date.now()}`,
+          staffName: staffName || 'Staff Stylist',
+          date: today,
+          checkInTime: nowTime,
+          checkOutTime: '',
+          status: 'Present',
+          notes: notes || 'Punched in for work shift',
+          createdAt: new Date().toISOString()
+        };
+        return [updatedRecord, ...prev];
+      }
+    });
+
+    try {
+      if (updatedRecord) {
+        await addDocument('staffAttendance', updatedRecord);
+      }
+    } catch (err) {
+      console.warn("Could not sync attendance to Firestore:", err);
+    }
+
+    return updatedRecord;
+  };
+
+  const submitLeaveRequest = async (requestData) => {
+    const leaveId = `leave_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+    const submittedAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const newLeave = {
+      id: leaveId,
+      staffId: requestData.staffId || currentUser?.uid || '',
+      staffName: requestData.staffName || currentUser?.name || 'Staff Specialist',
+      staffRole: requestData.staffRole || 'Stylist',
+      leaveType: requestData.leaveType || 'Casual Leave',
+      startDate: requestData.startDate,
+      endDate: requestData.endDate || requestData.startDate,
+      session: requestData.session || 'Full Day',
+      startTime: requestData.startTime || '',
+      endTime: requestData.endTime || '',
+      reason: requestData.reason || '',
+      status: 'Pending',
+      adminRemarks: '',
+      adminName: '',
+      adminActionDate: '',
+      submittedAt
+    };
+
+    setLeaveRequests(prev => [newLeave, ...prev]);
+
+    try {
+      await addDocument('leaveRequests', newLeave);
+    } catch (err) {
+      console.warn("Could not save leave request to Firestore:", err);
+    }
+
+    return newLeave;
+  };
+
+  const updateLeaveRequestStatus = async (leaveId, status, adminRemarks = '', adminName = '') => {
+    const actionDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const updates = {
+      status,
+      adminRemarks,
+      adminActionDate: actionDate,
+      adminName: adminName || (currentUser?.name || 'Salon Admin')
+    };
+
+    setLeaveRequests(prev =>
+      prev.map(l => l.id === leaveId ? { ...l, ...updates } : l)
+    );
+
+    try {
+      await updateDocument('leaveRequests', leaveId, updates);
+    } catch (err) {
+      console.warn("Could not update leave request in Firestore:", err);
+    }
+  };
+
   return (
     <SalonContext.Provider value={{
       // Theme
@@ -597,6 +845,8 @@ export const SalonProvider = ({ children }) => {
       setCustomerTab,
       adminTab,
       setAdminTab,
+      staffTab,
+      setStaffTab,
       // Data
       services,
       staff,
@@ -606,6 +856,8 @@ export const SalonProvider = ({ children }) => {
       feedback,
       staffMessages,
       complaints,
+      staffAttendance,
+      leaveRequests,
       // Actions
       addBooking,
       updateBookingStatus,
@@ -621,11 +873,21 @@ export const SalonProvider = ({ children }) => {
       updateStaffStatus,
       updateStaffLevel,
       updateStaffProfile,
+      updateUserProfile,
       addFeedback,
       sendStaffMessage,
       markStaffMessagesRead,
       submitComplaint,
       updateComplaintStatus,
+      markStaffAttendance,
+      submitLeaveRequest,
+      updateLeaveRequestStatus,
+      // AI Hair Studio
+      hairFavorites,
+      addHairFavorite,
+      removeHairFavorite,
+      prefilledBookingStyle,
+      setPrefilledBookingStyle,
     }}>
       {children}
     </SalonContext.Provider>

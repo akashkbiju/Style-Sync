@@ -103,8 +103,8 @@ export const ManageHomeRequests = () => {
                 {req.status === 'Pending' && (
                   <button 
                     onClick={() => updateBookingStatus(req.id, 'In-Progress')}
-                    className="btn-gold" 
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff' }}
+                    className="btn-red-neon" 
+                    style={{ padding: '0.45rem 1.1rem', fontSize: '0.8rem' }}
                   >
                     Dispatch Staff (Mark In-Progress)
                   </button>
@@ -113,8 +113,8 @@ export const ManageHomeRequests = () => {
                 {req.status === 'In-Progress' && (
                   <button 
                     onClick={() => updateBookingStatus(req.id, 'Completed')}
-                    className="btn-gold" 
-                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff' }}
+                    className="btn-red-neon" 
+                    style={{ padding: '0.45rem 1.1rem', fontSize: '0.8rem' }}
                   >
                     Mark Visit Completed
                   </button>

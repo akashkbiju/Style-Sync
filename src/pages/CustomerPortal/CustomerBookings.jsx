@@ -157,6 +157,23 @@ export const CustomerBookings = () => {
                 </div>
               </div>
 
+              {/* AI Hairstyle Reference if attached */}
+              {(bk.hairstyleTitle || bk.hairstyleRef) && (
+                <div style={{ background: 'rgba(225, 29, 72, 0.08)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(225, 29, 72, 0.25)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {bk.hairstyleRef && (
+                    <div style={{ width: '40px', height: '48px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--accent-red)', flexShrink: 0 }}>
+                      <img src={bk.hairstyleRef} alt={bk.hairstyleTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+                  <div>
+                    <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      ✂️ Chosen Look: {bk.hairstyleTitle}
+                    </span>
+                    {bk.hairstyleColor && <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Color Shade: {bk.hairstyleColor}</div>}
+                  </div>
+                </div>
+              )}
+
               {bk.type === 'home-service' && (
                 <div style={{ background: 'rgba(168, 85, 247, 0.08)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(168, 85, 247, 0.2)', fontSize: '0.85rem' }}>
                   <span style={{ color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>

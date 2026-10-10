@@ -9,7 +9,8 @@ import {
   CheckCircle,
   PlusCircle,
   HeartHandshake,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
 import { BookInShop } from './BookInShop';
 import { BookHomeService } from './BookHomeService';
@@ -194,6 +195,13 @@ export const CustomerHome = () => {
                   </button>
 
                   <button 
+                    onClick={() => setCustomerTab('ai-hair-studio')}
+                    className="px-8 py-4 bg-primary text-white font-bold uppercase tracking-[0.15em] shadow-[0_0_25px_rgba(225,29,72,0.6)] hover:bg-primary/90 transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Sparkles size={16} /> AI Hair Studio
+                  </button>
+
+                  <button 
                     onClick={() => setCustomerTab('book-home')}
                     className="px-8 py-4 bg-transparent border border-white/40 text-white font-bold uppercase tracking-[0.15em] hover:border-white transition-all cursor-pointer"
                   >
@@ -202,6 +210,34 @@ export const CustomerHome = () => {
                 </div>
               </div>
 
+            </div>
+          </section>
+
+          {/* AI Hair Studio Feature Spotlight Banner */}
+          <section className="relative z-10 my-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-r from-zinc-950 via-zinc-900 to-black p-8 sm:p-10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="space-y-3 max-w-xl text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
+                    <Sparkles size={13} /> New Experience • Virtual Try-On
+                  </div>
+                  <h3 className="font-display text-2xl sm:text-3xl font-bold uppercase text-white">
+                    Try Any Hairstyle or Color Virtually With <span className="text-primary text-glow">AI Studio</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-light">
+                    Upload your selfie or open your live camera. Explore 20+ precision cuts for boys and girls, experiment with salon highlights and balayage, and book your stylist instantly.
+                  </p>
+                </div>
+
+                <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <button
+                    onClick={() => setCustomerTab('ai-hair-studio')}
+                    className="px-8 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(225,29,72,0.5)] transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Sparkles size={16} /> Launch AI Hair Studio
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
 

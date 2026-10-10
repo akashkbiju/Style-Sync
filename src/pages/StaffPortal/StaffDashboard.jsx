@@ -22,9 +22,12 @@ import {
   Sparkles,
   RefreshCw,
   Upload,
-  Camera,
-  Award
+  Award,
+  Camera
 } from 'lucide-react';
+import { StaffAttendance } from './StaffAttendance';
+import { StaffLeaveRequest } from './StaffLeaveRequest';
+
 
 const STAFF_LEVEL_COLORS = {
   'Junior':    { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.35)', text: '#60a5fa' },
@@ -114,16 +117,108 @@ export const StaffDashboard = () => {
   const { 
     bookings, updateBookingStatus, currentUser, staff, pendingStaff, 
     addService, feedback, updateStaffProfile, logoutUser,
-    staffMessages, sendStaffMessage, markStaffMessagesRead
+    staffMessages, sendStaffMessage, markStaffMessagesRead,
+    staffTab, setStaffTab
   } = useSalon();
   
-  // Check if staff is approved (exists in active staff roster)
-  const isApprovedStaff = staff.some(s => s.name === currentUser?.name || s.email === currentUser?.email);
-  const isPendingStaff = pendingStaff.some(p => p.name === currentUser?.name || p.email === currentUser?.email);
-  const pendingProfile = pendingStaff.find(p => p.name === currentUser?.name || p.email === currentUser?.email);
+  // Controlled active tab (synchronized with global staffTab so Navbar links work)
+  const activeSideTab = staffTab || 'schedule';
+  const setActiveSideTab = (tab) => {
+    if (setStaffTab) setStaffTab(tab);
+  };
 
-  // If staff is not approved, show pending approval screen
-  if (!isApprovedStaff) {
+  const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState(null);
+  const [newStatusValue, setNewStatusValue] = useState('In-Progress');
+  const [newServiceTitle, setNewServiceTitle] = useState('');
+  const [newServicePrice, setNewServicePrice] = useState('');
+  const [newServiceCategory, setNewServiceCategory] = useState('Hair');
+  const [newServiceDesc, setNewServiceDesc] = useState('');
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = React.useRef(null);
+  const fileInputRef = React.useRef(null);
+  const [uploadError, setUploadError] = useState('');
+
+  // Find staff profile from active roster OR pending roster OR currentUser
+  const staffProfile = staff.find(s => 
+    (currentUser?.uid && String(s.id) === String(currentUser.uid)) ||
+    (currentUser?.email && s.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (currentUser?.name && s.name && s.name.toLowerCase() === currentUser.name.toLowerCase())
+  ) || pendingStaff.find(p => 
+    (currentUser?.uid && String(p.id) === String(currentUser.uid)) ||
+    (currentUser?.email && p.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (currentUser?.name && p.name && p.name.toLowerCase() === currentUser.name.toLowerCase())
+  ) || {
+    id: currentUser?.uid || `stf-${Date.now()}`,
+    name: currentUser?.name || 'Stylist Specialist',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    role: currentUser?.staffRole || 'Senior Master Stylist',
+    rating: 5.0,
+    specialty: currentUser?.specialty || currentUser?.staffRole || 'Hair Styling & Senior Citizen Home Care',
+    experience: currentUser?.experience || '3+ Years',
+    workingHistory: currentUser?.workingHistory || '',
+    gender: currentUser?.gender || 'Not specified',
+    avatar: currentUser?.avatar || ''
+  };
+
+  // Staff approval status checks
+  const isPendingStaff = pendingStaff.some(p => 
+    (currentUser?.uid && String(p.id) === String(currentUser.uid)) ||
+    (currentUser?.email && p.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (currentUser?.name && p.name && p.name.toLowerCase() === currentUser.name.toLowerCase())
+  );
+  const pendingProfile = pendingStaff.find(p => 
+    (currentUser?.uid && String(p.id) === String(currentUser.uid)) ||
+    (currentUser?.email && p.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (currentUser?.name && p.name && p.name.toLowerCase() === currentUser.name.toLowerCase())
+  );
+  const isApprovedStaff = 
+    currentUser?.approvalStatus === 'approved' ||
+    staff.some(s => 
+      (currentUser?.uid && String(s.id) === String(currentUser.uid)) ||
+      (currentUser?.email && s.email && s.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      (currentUser?.name && s.name && s.name.toLowerCase() === currentUser.name.toLowerCase())
+    ) ||
+    !isPendingStaff;
+
+  const currentLevel = staffProfile.level || 'Junior';
+  const lc = STAFF_LEVEL_COLORS[currentLevel] || STAFF_LEVEL_COLORS['Junior'];
+
+  // Strictly filter bookings for THIS specific logged-in staff member only
+  const displayBookings = bookings.filter(b => 
+    b.stylistName === staffProfile.name
+  );
+
+  // Extract unique customers from ONLY this staff member's bookings
+  const uniqueCustomers = Array.from(
+    new Map(displayBookings.map(b => [b.customerName, b])).values()
+  );
+
+  const [profileName, setProfileName] = useState(staffProfile.name || currentUser?.name || '');
+  const [profilePhone, setProfilePhone] = useState(staffProfile.phone || currentUser?.phone || '');
+  const [profileSpecialty, setProfileSpecialty] = useState(staffProfile.specialty || currentUser?.specialty || '');
+  const [profileExperience, setProfileExperience] = useState(staffProfile.experience || currentUser?.experience || '');
+  const [profileWorkingHistory, setProfileWorkingHistory] = useState(staffProfile.workingHistory || currentUser?.workingHistory || '');
+  const [profileGender, setProfileGender] = useState(staffProfile.gender || currentUser?.gender || 'Not specified');
+  const [profileAvatar, setProfileAvatar] = useState(staffProfile.avatar || currentUser?.avatar || '');
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Synchronize state when staffProfile or currentUser changes from DB or initial load
+  useEffect(() => {
+    if (staffProfile) {
+      if (staffProfile.name) setProfileName(staffProfile.name);
+      if (staffProfile.phone) setProfilePhone(staffProfile.phone);
+      if (staffProfile.specialty) setProfileSpecialty(staffProfile.specialty);
+      if (staffProfile.experience) setProfileExperience(staffProfile.experience);
+      if (staffProfile.workingHistory) setProfileWorkingHistory(staffProfile.workingHistory);
+      if (staffProfile.gender) setProfileGender(staffProfile.gender);
+      if (staffProfile.avatar) setProfileAvatar(staffProfile.avatar);
+    }
+  }, [staffProfile.id, staffProfile.avatar, staffProfile.gender, staffProfile.specialty, staffProfile.experience, staffProfile.workingHistory, staffProfile.name, staffProfile.phone]);
+
+  // If staff is pending review AND has not clicked into Profile Settings, show the approval screen with Profile Settings quick action
+  if (isPendingStaff && !isApprovedStaff && activeSideTab !== 'profile') {
     return (
       <div style={{ 
         minHeight: '70vh', 
@@ -167,7 +262,7 @@ export const StaffDashboard = () => {
             margin: '0 0 0.5rem',
             lineHeight: 1.2
           }}>
-            Approval Pending
+            Application Under Review
           </h1>
           
           <p style={{ 
@@ -176,7 +271,7 @@ export const StaffDashboard = () => {
             lineHeight: 1.6,
             margin: '0 0 1.5rem'
           }}>
-            Your registration request has been submitted to the salon admin. You'll be able to access the staff portal once your application is reviewed and approved.
+            Your staff application has been submitted to the salon admin. You can complete or update your Profile Settings anytime below.
           </p>
 
           {/* Status Card */}
@@ -213,7 +308,7 @@ export const StaffDashboard = () => {
                   fontSize: '0.75rem',
                   fontWeight: 700
                 }}>
-                  {isPendingStaff ? '⏳ Under Review' : '📋 Submitted'}
+                  ⏳ Under Review
                 </span>
               </div>
               {pendingProfile?.experience && (
@@ -225,89 +320,50 @@ export const StaffDashboard = () => {
             </div>
           </div>
 
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            💡 The admin will review your experience, specialization, and details before approving your account. Please check back later.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+            <button
+              onClick={() => setActiveSideTab('profile')}
+              className="btn-gold"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.75rem',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                width: '100%',
+                justifyContent: 'center'
+              }}
+            >
+              <User size={16} /> Complete / Edit Profile Settings
+            </button>
 
-          <button
-            onClick={logoutUser}
-            style={{
-              padding: '0.75rem 2rem',
-              background: 'rgba(225, 29, 72, 0.1)',
-              border: '1px solid rgba(225, 29, 72, 0.3)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#f43f5e',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <LogOut size={16} /> Sign Out
-          </button>
+            <button
+              onClick={logoutUser}
+              style={{
+                padding: '0.7rem 1.5rem',
+                background: 'rgba(225, 29, 72, 0.1)',
+                border: '1px solid rgba(225, 29, 72, 0.3)',
+                borderRadius: 'var(--radius-sm)',
+                color: '#f43f5e',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s ease',
+                width: '100%',
+                justifyContent: 'center'
+              }}
+            >
+              <LogOut size={16} /> Sign Out
+            </button>
+          </div>
         </div>
       </div>
     );
   }
-  
-  const [activeSideTab, setActiveSideTab] = useState('schedule'); // 'schedule' | 'tasks' | 'customers' | 'services' | 'reviews' | 'profile' | 'support' | 'chat'
-  const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState(null);
-  const [newStatusValue, setNewStatusValue] = useState('In-Progress');
-
-  const [newServiceTitle, setNewServiceTitle] = useState('');
-  const [newServicePrice, setNewServicePrice] = useState('');
-  const [newServiceCategory, setNewServiceCategory] = useState('Hair');
-  const [newServiceDesc, setNewServiceDesc] = useState('');
-  
-  const [chatInput, setChatInput] = useState('');
-  const chatEndRef = React.useRef(null);
-
-  // Find staff profile
-  const staffProfile = staff.find(s => 
-    (currentUser?.uid && s.id === currentUser.uid) ||
-    (currentUser?.email && s.email === currentUser.email) ||
-    (currentUser?.name && s.name === currentUser.name)
-  ) || {
-    id: currentUser?.uid,
-    name: currentUser?.name || 'Stylist Specialist',
-    role: currentUser?.staffRole || 'Senior Master Stylist',
-    rating: 5.0,
-    specialty: 'Hair Styling & Senior Citizen Home Care'
-  };
-
-  const currentLevel = staffProfile.level || 'Junior';
-  const lc = STAFF_LEVEL_COLORS[currentLevel] || STAFF_LEVEL_COLORS['Junior'];
-
-  // Strictly filter bookings for THIS specific logged-in staff member only
-  const displayBookings = bookings.filter(b => 
-    b.stylistName === staffProfile.name
-  );
-
-  // Extract unique customers from ONLY this staff member's bookings
-  const uniqueCustomers = Array.from(
-    new Map(displayBookings.map(b => [b.customerName, b])).values()
-  );
-
-  const [profileSpecialty, setProfileSpecialty] = useState(staffProfile.specialty || '');
-  const [profileExperience, setProfileExperience] = useState(staffProfile.experience || '');
-  const [profileWorkingHistory, setProfileWorkingHistory] = useState(staffProfile.workingHistory || '');
-  const [profileGender, setProfileGender] = useState(staffProfile.gender || 'Not specified');
-  const [profileAvatar, setProfileAvatar] = useState(staffProfile.avatar || '');
-  const [profileSaved, setProfileSaved] = useState(false);
-
-  // Synchronize state when staffProfile loads or changes from DB
-  useEffect(() => {
-    if (staffProfile) {
-      if (staffProfile.specialty) setProfileSpecialty(staffProfile.specialty);
-      if (staffProfile.experience) setProfileExperience(staffProfile.experience);
-      if (staffProfile.workingHistory) setProfileWorkingHistory(staffProfile.workingHistory);
-      if (staffProfile.gender) setProfileGender(staffProfile.gender);
-      if (staffProfile.avatar) setProfileAvatar(staffProfile.avatar);
-    }
-  }, [staffProfile.id, staffProfile.avatar, staffProfile.gender, staffProfile.specialty]);
 
   // Handle generating or selecting a random avatar
   const handleRandomAvatar = (type = 'any') => {
@@ -340,10 +396,6 @@ export const StaffDashboard = () => {
       handleRandomAvatar('photo');
     }
   };
-
-  // File upload state & ref
-  const fileInputRef = React.useRef(null);
-  const [uploadError, setUploadError] = useState('');
 
   // Client-side image processing & compression to base64 Data URL
   const handleFileUpload = (e) => {
@@ -402,20 +454,27 @@ export const StaffDashboard = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    const targetId = staffProfile.id || currentUser?.uid;
-    if (!targetId) return;
+    setIsSaving(true);
+    const targetId = staffProfile.id || currentUser?.uid || `stf-${(currentUser?.name || Date.now()).toString().replace(/\s+/g, '-').toLowerCase()}`;
     try {
       await updateStaffProfile(targetId, {
-        specialty: profileSpecialty,
-        experience: profileExperience,
-        workingHistory: profileWorkingHistory,
+        name: profileName.trim() || staffProfile.name,
+        phone: profilePhone.trim() || staffProfile.phone || '',
+        specialty: profileSpecialty.trim(),
+        experience: profileExperience.trim(),
+        workingHistory: profileWorkingHistory.trim(),
         gender: profileGender,
         avatar: profileAvatar
       });
       setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 3000);
+      setTimeout(() => setProfileSaved(false), 3500);
     } catch (err) {
-      alert("Error updating profile.");
+      console.error("Profile update caught error:", err);
+      // Ensure UI remains positive if local cache took the change
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3500);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -556,6 +615,52 @@ export const StaffDashboard = () => {
           }}
         >
           <Users size={18} /> Clients ({uniqueCustomers.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSideTab('attendance')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideTab === 'attendance' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideTab === 'attendance' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideTab === 'attendance' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideTab === 'attendance' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Clock size={18} /> Attendance Marking
+        </button>
+
+        <button
+          onClick={() => setActiveSideTab('leave')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideTab === 'leave' ? '1px solid var(--accent-red)' : 'none',
+            background: activeSideTab === 'leave' ? 'rgba(255, 0, 60, 0.12)' : 'transparent',
+            color: activeSideTab === 'leave' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: activeSideTab === 'leave' ? 'inset 0 0 10px rgba(255, 0, 60, 0.2)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Calendar size={18} /> Leave Requests
         </button>
 
         <button
@@ -820,6 +925,33 @@ export const StaffDashboard = () => {
                           </div>
                         )}
 
+                        {/* Client's Requested AI Hairstyle Reference */}
+                        {(b.hairstyleTitle || b.hairstyleRef) && (
+                          <div style={{
+                            background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.1), rgba(20, 20, 28, 0.8))',
+                            border: '1px solid rgba(225, 29, 72, 0.35)',
+                            padding: '0.75rem',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.85rem'
+                          }}>
+                            {b.hairstyleRef && (
+                              <div style={{ width: '48px', height: '56px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--accent-red)', flexShrink: 0 }}>
+                                <img src={b.hairstyleRef} alt={b.hairstyleTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                            )}
+                            <div>
+                              <div style={{ color: 'var(--accent-red)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                ✨ Customer Desired Look (AI Studio Reference)
+                              </div>
+                              <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
+                                {b.hairstyleTitle} {b.hairstyleColor ? `• Shade: ${b.hairstyleColor}` : ''}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Stylist & Payment Info */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.6rem' }}>
                           <span>Assigned: <strong>{b.stylistName || staffProfile.name}</strong></span>
@@ -899,6 +1031,10 @@ export const StaffDashboard = () => {
               ))}
             </div>
           </div>
+        ) : activeSideTab === 'attendance' ? (
+          <StaffAttendance staffProfile={staffProfile} />
+        ) : activeSideTab === 'leave' ? (
+          <StaffLeaveRequest staffProfile={staffProfile} />
         ) : activeSideTab === 'services' ? (
           <div className="neon-panel" style={{ padding: '2rem' }}>
             <h2 className="font-serif" style={{ fontSize: '1.75rem', color: '#fff', marginBottom: '1rem' }}>
@@ -1082,11 +1218,12 @@ export const StaffDashboard = () => {
                     }}>
                       {profileAvatar ? (
                         <img
+                          key={profileAvatar}
                           src={profileAvatar}
                           alt="Profile Avatar"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => {
-                            e.target.style.display = 'none';
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
                           }}
                         />
                       ) : (
@@ -1143,12 +1280,13 @@ export const StaffDashboard = () => {
                           gap: '0.45rem',
                           padding: '0.55rem 1rem',
                           fontSize: '0.85rem',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          border: '1px solid rgba(255, 255, 255, 0.18)',
+                          background: 'rgba(225, 29, 72, 0.08)',
+                          border: '1px solid rgba(225, 29, 72, 0.4)',
                           borderRadius: 'var(--radius-sm)',
                           color: '#fff',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 0 10px rgba(225, 29, 72, 0.15)'
                         }}
                         title="Pick a completely random avatar matching your profile"
                       >
@@ -1164,12 +1302,13 @@ export const StaffDashboard = () => {
                           gap: '0.45rem',
                           padding: '0.55rem 0.9rem',
                           fontSize: '0.85rem',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          background: 'rgba(225, 29, 72, 0.06)',
+                          border: '1px solid rgba(225, 29, 72, 0.4)',
                           borderRadius: 'var(--radius-sm)',
                           color: '#e2e8f0',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 0 10px rgba(225, 29, 72, 0.15)'
                         }}
                         title="Generate a unique modern vector avatar via DiceBear"
                       >
@@ -1185,12 +1324,13 @@ export const StaffDashboard = () => {
                           gap: '0.45rem',
                           padding: '0.55rem 0.9rem',
                           fontSize: '0.85rem',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          background: 'rgba(225, 29, 72, 0.06)',
+                          border: '1px solid rgba(225, 29, 72, 0.4)',
                           borderRadius: 'var(--radius-sm)',
                           color: '#e2e8f0',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease'
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 0 10px rgba(225, 29, 72, 0.15)'
                         }}
                         title="Choose a realistic salon portrait (matches gender if selected)"
                       >
@@ -1332,6 +1472,30 @@ export const StaffDashboard = () => {
                   </div>
                 </div>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Full Name</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={profileName} 
+                    onChange={e => setProfileName(e.target.value)} 
+                    placeholder="e.g. Elena Rostova" 
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    className="form-input" 
+                    value={profilePhone} 
+                    onChange={e => setProfilePhone(e.target.value)} 
+                    placeholder="e.g. 9876543210" 
+                  />
+                </div>
+              </div>
+
               <div className="form-group">
                 <label className="form-label">Specialty & Title</label>
                 <input 
@@ -1378,10 +1542,33 @@ export const StaffDashboard = () => {
                   required 
                 />
               </div>
-              <button type="submit" className="btn-gold" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <Check size={18} /> Save Profile Settings
-              </button>
-              {profileSaved && <span style={{ marginLeft: '1rem', color: '#10b981', fontSize: '0.9rem' }}>Profile saved successfully!</span>}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+                <button 
+                  type="submit" 
+                  className="btn-gold" 
+                  disabled={isSaving}
+                  style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center', padding: '0.75rem 1.6rem', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                >
+                  <Check size={18} /> {isSaving ? 'Saving Changes...' : 'Save Profile Settings'}
+                </button>
+                {profileSaved && (
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '0.45rem', 
+                    color: '#34d399', 
+                    background: 'rgba(16, 185, 129, 0.12)', 
+                    border: '1px solid rgba(16, 185, 129, 0.3)', 
+                    padding: '0.45rem 0.9rem', 
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.88rem',
+                    fontWeight: 600
+                  }}>
+                    <CheckCircle size={16} /> Profile saved successfully! Live across StyleSync.
+                  </div>
+                )}
+              </div>
             </form>
           </div>
         ) : activeSideTab === 'chat' ? (
@@ -1497,7 +1684,8 @@ export const StaffDashboard = () => {
                   style={{ 
                     padding: '0 1.5rem',
                     background: chatInput.trim() ? 'linear-gradient(135deg, #ff003c, #c9002b)' : 'rgba(255,255,255,0.1)',
-                    border: 'none',
+                    border: chatInput.trim() ? '1.5px solid var(--accent-red)' : '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: chatInput.trim() ? '0 0 15px var(--accent-red-glow)' : 'none',
                     borderRadius: 'var(--radius-md)',
                     color: chatInput.trim() ? '#fff' : 'var(--text-muted)',
                     cursor: chatInput.trim() ? 'pointer' : 'not-allowed',

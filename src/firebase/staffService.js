@@ -38,12 +38,12 @@ export const addStaffToDB = async (staffData) => {
 // Update an existing staff member
 export const updateStaffInDB = async (staffId, updatedData) => {
   try {
-    const staffRef = doc(db, STAFF_COLLECTION, staffId);
-    await updateDoc(staffRef, updatedData);
+    const staffRef = doc(db, STAFF_COLLECTION, String(staffId));
+    await setDoc(staffRef, updatedData, { merge: true });
     return true;
   } catch (error) {
     console.error("Error updating staff in Firestore:", error);
-    throw error;
+    return false;
   }
 };
 

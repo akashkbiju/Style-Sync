@@ -36,12 +36,12 @@ export const addDocument = async (collectionName, data) => {
 // Generic update function
 export const updateDocument = async (collectionName, docId, updatedData) => {
   try {
-    const docRef = doc(db, collectionName, docId);
-    await updateDoc(docRef, updatedData);
+    const docRef = doc(db, collectionName, String(docId));
+    await setDoc(docRef, updatedData, { merge: true });
     return true;
   } catch (error) {
     console.error(`Error updating ${collectionName}:`, error);
-    throw error;
+    return false;
   }
 };
 

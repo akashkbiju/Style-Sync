@@ -13,14 +13,14 @@
 import emailjs from '@emailjs/browser';
 
 // ══════════════════════════════════════════════════════════════════════════
-// 🔑 REPLACE THESE WITH YOUR EMAILJS CREDENTIALS
+// 🔑 SECURE EMAILJS CREDENTIALS (Loaded from .env)
 // ══════════════════════════════════════════════════════════════════════════
-const EMAILJS_SERVICE_ID = 'service_k2a0n0w';
-const EMAILJS_TEMPLATE_ID = 'template_cgfr239';
-const EMAILJS_PUBLIC_KEY = 'DImwYCM14wKvhYlaU';     // Your real public key
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
 
 // Check if EmailJS is properly configured
-const isEmailJSConfigured = () => EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY_HERE';
+const isEmailJSConfigured = () => Boolean(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID);
 
 /**
  * Send an email notification using EmailJS.

@@ -20,8 +20,14 @@ export const ManageStaff = () => {
   const {
     staff, addStaffMember, removeStaffMember, updateStaffLevel,
     pendingStaff, approvePendingStaff, rejectPendingStaff,
-    bookings, feedback, staffMessages, sendStaffMessage, markStaffMessagesRead
+    bookings, feedback, staffMessages, sendStaffMessage, markStaffMessagesRead,
+    staffAttendance, leaveRequests, updateLeaveRequestStatus, currentUser
   } = useSalon();
+
+  const [staffAdminTab, setStaffAdminTab] = useState('roster'); // 'roster' | 'attendance' | 'leaves'
+  const [leaveRemarksMap, setLeaveRemarksMap] = useState({});
+  const [leaveFilter, setLeaveFilter] = useState('All');
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedPendingId, setExpandedPendingId] = useState(null);
@@ -121,6 +127,20 @@ export const ManageStaff = () => {
     return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleApproveLeave = async (leaveId) => {
+    const remarks = leaveRemarksMap[leaveId] || 'Approved by Salon Administration';
+    await updateLeaveRequestStatus(leaveId, 'Approved', remarks, currentUser?.name || 'Salon Admin');
+  };
+
+  const handleRejectLeave = async (leaveId) => {
+    const remarks = leaveRemarksMap[leaveId] || 'Rejected due to salon booking schedule';
+    await updateLeaveRequestStatus(leaveId, 'Rejected', remarks, currentUser?.name || 'Salon Admin');
+  };
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const pendingLeavesCount = (leaveRequests || []).filter(l => l.status === 'Pending').length;
+  const filteredLeaves = (leaveRequests || []).filter(l => leaveFilter === 'All' ? true : l.status === leaveFilter);
+
   return (
     <div style={{ paddingBottom: '3rem' }}>
 
@@ -152,21 +172,103 @@ export const ManageStaff = () => {
       )}
 
       {/* Header */}
-      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="font-serif gold-text" style={{ fontSize: '2rem', margin: 0 }}>Salon Staff Management</h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Approve, promote, chat, and manage your team</p>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Roster, Daily Attendance Tracking, and Leave Approval Administration</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="btn-gold">
           <Plus size={18} /> Add New Staff
         </button>
       </div>
 
-      {/* ═════════════════════════════════════════════════════════════════
-          PENDING APPROVALS
-          ═════════════════════════════════════════════════════════════════ */}
-      {pendingStaff.length > 0 && (
-        <div style={{ marginBottom: '2.5rem' }}>
+      {/* Section Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', flexWrap: 'wrap', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
+        <button
+          type="button"
+          onClick={() => setStaffAdminTab('roster')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            borderRadius: 'var(--radius-sm)',
+            border: staffAdminTab === 'roster' ? '1.5px solid var(--accent-red)' : '1px solid rgba(225, 29, 72, 0.35)',
+            background: staffAdminTab === 'roster' ? 'rgba(225, 29, 72, 0.15)' : 'rgba(225, 29, 72, 0.03)',
+            color: staffAdminTab === 'roster' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: staffAdminTab === 'roster' ? '0 0 15px var(--accent-red-glow)' : 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Briefcase size={16} /> Team Roster ({staff.length})
+          {pendingStaff.length > 0 && (
+            <span className="badge" style={{ background: '#f59e0b', color: '#000', fontSize: '0.7rem', padding: '0.1rem 0.45rem', fontWeight: 800 }}>
+              {pendingStaff.length} New
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStaffAdminTab('attendance')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            borderRadius: 'var(--radius-sm)',
+            border: staffAdminTab === 'attendance' ? '1.5px solid var(--accent-red)' : '1px solid rgba(225, 29, 72, 0.35)',
+            background: staffAdminTab === 'attendance' ? 'rgba(225, 29, 72, 0.15)' : 'rgba(225, 29, 72, 0.03)',
+            color: staffAdminTab === 'attendance' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: staffAdminTab === 'attendance' ? '0 0 15px var(--accent-red-glow)' : 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Clock size={16} /> Daily Attendance Logs ({(staffAttendance || []).filter(a => a.date === todayStr).length} Active)
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStaffAdminTab('leaves')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            borderRadius: 'var(--radius-sm)',
+            border: staffAdminTab === 'leaves' ? '1.5px solid var(--accent-red)' : '1px solid rgba(225, 29, 72, 0.35)',
+            background: staffAdminTab === 'leaves' ? 'rgba(225, 29, 72, 0.15)' : 'rgba(225, 29, 72, 0.03)',
+            color: staffAdminTab === 'leaves' ? 'var(--accent-red)' : 'var(--text-secondary)',
+            boxShadow: staffAdminTab === 'leaves' ? '0 0 15px var(--accent-red-glow)' : 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <Calendar size={16} /> Leave Requests ({(leaveRequests || []).length})
+          {pendingLeavesCount > 0 && (
+            <span className="badge" style={{ background: '#e11d48', color: '#fff', fontSize: '0.7rem', padding: '0.1rem 0.5rem', fontWeight: 800 }}>
+              {pendingLeavesCount} Pending
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* TAB 1: ROSTER & REGISTRATION APPROVALS */}
+      {staffAdminTab === 'roster' && (
+        <>
+          {/* ═════════════════════════════════════════════════════════════════
+              PENDING APPROVALS
+              ═════════════════════════════════════════════════════════════════ */}
+          {pendingStaff.length > 0 && (
+            <div style={{ marginBottom: '2.5rem' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem',
             padding: '1rem 1.25rem',
@@ -424,6 +526,362 @@ export const ManageStaff = () => {
           );
         })}
       </div>
+    </>
+  )}
+
+  {/* ═════════════════════════════════════════════════════════════════
+      TAB 2: DAILY ATTENDANCE LOGS (ADMIN VIEW)
+      ═════════════════════════════════════════════════════════════════ */}
+  {staffAdminTab === 'attendance' && (() => {
+    const dateAttendance = (staffAttendance || []).filter(a => a.date === attendanceDate);
+    const presentCount = dateAttendance.filter(a => a.status === 'Present' || a.status === 'Completed').length;
+    const completedCount = dateAttendance.filter(a => a.checkOutTime).length;
+
+    return (
+      <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        
+        {/* Top Control Bar */}
+        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h3 className="font-serif gold-text" style={{ fontSize: '1.4rem', margin: 0 }}>
+              Staff Attendance Ledger
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>
+              Real-time daily punch-in &amp; punch-out logs for all verified stylists
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Select Date:</span>
+            <input 
+              type="date"
+              className="form-input"
+              value={attendanceDate}
+              onChange={e => setAttendanceDate(e.target.value)}
+              style={{ width: 'auto', padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
+            />
+            {attendanceDate !== todayStr && (
+              <button 
+                type="button" 
+                onClick={() => setAttendanceDate(todayStr)}
+                className="btn-secondary"
+                style={{ padding: '0.45rem 0.75rem', fontSize: '0.78rem' }}
+              >
+                Today
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Attendance Metrics */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Roster</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', marginTop: '0.2rem' }}>{staff.length}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Registered specialists</div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Present on {attendanceDate}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#34d399', marginTop: '0.2rem' }}>{presentCount}</div>
+            <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '0.2rem' }}>✓ Punched in for shift</div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Completed Shifts</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-gold)', marginTop: '0.2rem' }}>{completedCount}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>Punched in &amp; out</div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Absent / Off</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f87171', marginTop: '0.2rem' }}>
+              {Math.max(0, staff.length - presentCount)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>No log recorded</div>
+          </div>
+        </div>
+
+        {/* Attendance Ledger Table */}
+        <div className="glass-panel" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '0.75rem 1rem' }}>Stylist Member</th>
+                <th style={{ padding: '0.75rem 1rem' }}>Role &amp; Seniority</th>
+                <th style={{ padding: '0.75rem 1rem' }}>Punch In</th>
+                <th style={{ padding: '0.75rem 1rem' }}>Punch Out</th>
+                <th style={{ padding: '0.75rem 1rem' }}>Shift Status</th>
+                <th style={{ padding: '0.75rem 1rem' }}>Shift Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {staff.map(stf => {
+                const log = dateAttendance.find(a => a.staffId === stf.id || a.staffName === stf.name);
+                const isPresent = Boolean(log?.checkInTime);
+                const isOut = Boolean(log?.checkOutTime);
+
+                return (
+                  <tr key={stf.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <img 
+                          src={stf.avatar} 
+                          alt={stf.name} 
+                          style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: isPresent ? '2px solid #10b981' : '1px solid var(--border-subtle)' }} 
+                        />
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#fff' }}>{stf.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{stf.phone || stf.email || 'Stylist'}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{stf.role}</div>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.05rem 0.45rem', borderRadius: '9999px', background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-block', marginTop: '0.15rem' }}>
+                        {stf.level || 'Junior'}
+                      </span>
+                    </td>
+
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: isPresent ? '#34d399' : 'var(--text-muted)' }}>
+                      {log?.checkInTime || '-- : --'}
+                    </td>
+
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: isOut ? '#60a5fa' : 'var(--text-muted)' }}>
+                      {log?.checkOutTime || (isPresent ? 'On Duty' : '-- : --')}
+                    </td>
+
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      {isOut ? (
+                        <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.35)', fontSize: '0.72rem' }}>
+                          ✓ Shift Finished
+                        </span>
+                      ) : isPresent ? (
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.35)', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
+                          🟢 Active / Present
+                        </span>
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', fontSize: '0.72rem' }}>
+                          ⚪ Not Marked
+                        </span>
+                      )}
+                    </td>
+
+                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      {log?.notes || 'No remarks'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    );
+  })()}
+
+  {/* ═════════════════════════════════════════════════════════════════
+      TAB 3: LEAVE REQUESTS APPROVAL DASHBOARD (ADMIN VIEW)
+      ═════════════════════════════════════════════════════════════════ */}
+  {staffAdminTab === 'leaves' && (() => {
+    return (
+      <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        
+        {/* Header & Filter Bar */}
+        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h3 className="font-serif gold-text" style={{ fontSize: '1.4rem', margin: 0 }}>
+              Staff Leave Requests &amp; Approvals
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>
+              Review stylist date and time leave applications, add notes, and grant official authorization
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.04)', padding: '3px', borderRadius: '6px' }}>
+            {['All', 'Pending', 'Approved', 'Rejected'].map(st => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setLeaveFilter(st)}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: leaveFilter === st ? '1px solid var(--accent-red)' : '1px solid rgba(225, 29, 72, 0.3)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: leaveFilter === st ? 'rgba(225, 29, 72, 0.2)' : 'transparent',
+                  color: leaveFilter === st ? '#ffffff' : 'var(--text-secondary)',
+                  boxShadow: leaveFilter === st ? '0 0 10px var(--accent-red-glow)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Requests List */}
+        {filteredLeaves.length === 0 ? (
+          <div className="glass-panel" style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
+            <Calendar size={42} style={{ opacity: 0.25, marginBottom: '0.75rem' }} />
+            <h4 style={{ color: '#fff', margin: '0 0 0.3rem 0' }}>No Leave Requests Found</h4>
+            <p style={{ fontSize: '0.85rem', margin: 0 }}>There are currently no staff applications under "{leaveFilter}".</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {filteredLeaves.map(leave => {
+              const matchedStaff = staff.find(s => s.id === leave.staffId || s.name === leave.staffName);
+              const avatarUrl = matchedStaff?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+              const currentRemarks = leaveRemarksMap[leave.id] !== undefined ? leaveRemarksMap[leave.id] : (leave.adminRemarks || '');
+
+              return (
+                <div 
+                  key={leave.id} 
+                  className="glass-panel" 
+                  style={{ 
+                    padding: '1.5rem',
+                    border: leave.status === 'Pending' ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
+                    background: leave.status === 'Pending' ? 'linear-gradient(135deg, rgba(20,20,28,0.95), rgba(30,24,14,0.9))' : 'var(--bg-glass)'
+                  }}
+                >
+                  
+                  {/* Top Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <img 
+                        src={avatarUrl} 
+                        alt={leave.staffName} 
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-gold)' }} 
+                      />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <h4 style={{ color: '#fff', margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                            {leave.staffName}
+                          </h4>
+                          <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.45rem', borderRadius: '9999px', background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+                            {leave.staffRole || 'Stylist'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          Applied on: {leave.submittedAt}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div>
+                      {leave.status === 'Approved' ? (
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', fontSize: '0.8rem', padding: '0.35rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <CheckCircle size={14} /> Approved
+                        </span>
+                      ) : leave.status === 'Rejected' ? (
+                        <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.8rem', padding: '0.35rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <XCircle size={14} /> Rejected
+                        </span>
+                      ) : (
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontSize: '0.8rem', padding: '0.35rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Clock size={14} /> Pending Admin Decision
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Details Card */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Requested Leave Dates</div>
+                        <div style={{ fontWeight: 700, color: 'var(--accent-gold)', fontSize: '0.95rem', marginTop: '0.15rem' }}>
+                          {leave.startDate} {leave.endDate !== leave.startDate ? `➔ ${leave.endDate}` : ''}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category &amp; Session</div>
+                        <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.92rem', marginTop: '0.15rem' }}>
+                          {leave.leaveType} • {leave.session === 'Custom' ? `${leave.startTime} - ${leave.endTime}` : leave.session}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Reason Given by Stylist</div>
+                      <div style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.4, fontStyle: 'italic' }}>
+                        "{leave.reason}"
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Admin Decision Action Area */}
+                  {leave.status === 'Pending' ? (
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input 
+                        type="text"
+                        className="form-input"
+                        placeholder="Add remarks or instructions (e.g. Approved, appointments reassigned to Ananya)..."
+                        value={currentRemarks}
+                        onChange={e => setLeaveRemarksMap(prev => ({ ...prev, [leave.id]: e.target.value }))}
+                        style={{ flex: 1, minWidth: '260px', padding: '0.65rem 0.85rem', fontSize: '0.85rem' }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleApproveLeave(leave.id)}
+                        className="btn-gold"
+                        style={{ padding: '0.65rem 1.25rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                      >
+                        <CheckCircle size={15} /> Approve Leave
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRejectLeave(leave.id)}
+                        style={{
+                          padding: '0.65rem 1.25rem',
+                          fontSize: '0.85rem',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          color: '#f87171',
+                          borderRadius: 'var(--radius-sm)',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <XCircle size={15} /> Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Decision finalized on {leave.adminActionDate || 'Recent'} by <strong>{leave.adminName || 'Admin'}</strong>
+                      {leave.adminRemarks && (
+                        <div style={{ marginTop: '0.2rem', color: leave.status === 'Approved' ? '#34d399' : '#f87171' }}>
+                          Remarks: "{leave.adminRemarks}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+    );
+  })()}
+
+  {/* ═════════════════════════════════════════════════════════════════
 
       {/* ═════════════════════════════════════════════════════════════════
           CHAT MODAL
