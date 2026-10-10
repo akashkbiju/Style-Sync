@@ -37,11 +37,25 @@
     <!-- Google Fonts & Material Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <!-- Clear any stale PWA service workers that can cause blank screens -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        }).catch(function(){});
+      }
+    </script>
   </head>
   <body class="bg-background-dark text-slate-100 font-sans antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#09090b;color:#e11d48;font-family:sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:40px;height:40px;border:3px solid rgba(225,29,72,0.2);border-top-color:#e11d48;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px;"></div>
+          <p style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a1a1aa;margin:0;font-weight:600;">Loading StyleSync...</p>
+        </div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
