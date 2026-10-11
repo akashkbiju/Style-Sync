@@ -44,6 +44,7 @@ export const requestAiHairstyleTransfer = async ({
   userPhoto,
   styleImage,
   colorHex = 'transparent',
+  replicateToken = '',
   verticalOffset = 0,
   scaleOffset = 0,
   onStatusUpdate = () => {}
@@ -65,20 +66,23 @@ export const requestAiHairstyleTransfer = async ({
 
     if (health.online) {
       onStatusUpdate(
-        health.gpuInfo?.available
-          ? `Processing with GPU (${health.gpuInfo.device_name})...`
-          : 'Synthesizing with Python AI Service...'
+        replicateToken
+          ? 'Dispatching to Cloud NVIDIA A100 GPU (Replicate)...'
+          : health.gpuInfo?.available
+            ? `Processing with GPU (${health.gpuInfo.device_name})...`
+            : 'Synthesizing with Python AI Service...'
       );
 
       const payload = {
         user_photo_base64: userPhoto,
         style_image_url: styleImage,
         color_hex: colorHex !== 'transparent' ? colorHex : null,
-        blending_mode: 'Article'
+        blending_mode: 'Article',
+        replicate_token: replicateToken || null
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 35000);
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
 
       const res = await fetch(`${BACKEND_URL}/api/hair-transfer-json`, {
         method: 'POST',

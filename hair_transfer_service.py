@@ -24,6 +24,13 @@ from pydantic import BaseModel
 from PIL import Image
 import numpy as np
 
+# Replicate Cloud GPU Client
+try:
+    import replicate
+    HAS_REPLICATE = True
+except ImportError:
+    HAS_REPLICATE = False
+
 # Optional Gradio Client for HairFastGAN
 try:
     from gradio_client import Client, handle_file
@@ -31,7 +38,7 @@ try:
 except ImportError:
     HAS_GRADIO_CLIENT = False
 
-# OpenCV for computer vision & Poisson blending
+# OpenCV for computer vision
 try:
     import cv2
     HAS_OPENCV = True
@@ -275,15 +282,102 @@ def try_hairfastgan_remote_inference(face_path: str, style_path: str) -> Optiona
     return None
 
 
+def get_replicate_token(explicit_token: Optional[str] = None) -> Optional[str]:
+    """Finds Replicate API Token from payload, environment, or .env file."""
+    if explicit_token and explicit_token.strip():
+        return explicit_token.strip()
+
+    token = os.environ.get("REPLICATE_API_TOKEN") or os.environ.get("VITE_REPLICATE_API_TOKEN")
+    if token and token.strip():
+        return token.strip()
+
+    if os.path.exists(".env"):
+        try:
+            with open(".env", "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("VITE_REPLICATE_API_TOKEN=") or line.startswith("REPLICATE_API_TOKEN="):
+                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return val
+        except Exception:
+            pass
+    return None
+
+
+def try_replicate_hair_transfer(face_path: str, style_path: str, token: Optional[str] = None) -> Optional[Image.Image]:
+    """
+    Executes real neural hairstyle transfer using Replicate on Cloud NVIDIA A100 GPUs.
+    Supports official pose-invariant hairstyle models and HairFastGAN.
+    """
+    api_token = get_replicate_token(token)
+    if not api_token or not HAS_REPLICATE:
+        return None
+
+    try:
+        client = replicate.Client(api_token=api_token)
+        output = None
+
+        with open(face_path, "rb") as f_face, open(style_path, "rb") as f_style:
+            # 1. Try Pose-Invariant Hairstyle Transfer (cjwbw/style-your-hair)
+            try:
+                output = client.run(
+                    "cjwbw/style-your-hair:7034cf7f2868ff42bb6cb938221b0e77d077e68bc63914a87265be776e01a91e",
+                    input={
+                        "image": f_face,
+                        "style_image": f_style
+                    }
+                )
+            except Exception as e1:
+                print(f"[Replicate Style-Your-Hair Notice]: {e1}", file=sys.stderr)
+                f_face.seek(0)
+                f_style.seek(0)
+                # 2. Try HairFastGAN on Replicate
+                try:
+                    output = client.run(
+                        "camenduru/hairfastgan",
+                        input={
+                            "face": f_face,
+                            "shape": f_style,
+                            "color": f_style
+                        }
+                    )
+                except Exception as e2:
+                    print(f"[Replicate HairFastGAN Notice]: {e2}", file=sys.stderr)
+
+        if output:
+            result_url = None
+            if isinstance(output, list) and len(output) > 0:
+                result_url = str(output[0])
+            elif hasattr(output, "url"):
+                result_url = str(output.url)
+            else:
+                result_url = str(output)
+
+            if result_url and (result_url.startswith("http://") or result_url.startswith("https://")):
+                return download_image_from_url(result_url)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Replicate Execution Error]: {e}", file=sys.stderr)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Replicate Cloud GPU inference error: {str(e)}"
+        )
+    return None
+
+
 @app.get("/health")
 def health_check():
     """Service health probe and hardware capabilities."""
     return {
         "status": "online",
         "service": "StyleSync AI Hairstyle Transfer Service",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "gpu_info": GPU_INFO,
         "hairfastgan_ready": HAS_GRADIO_CLIENT,
+        "replicate_ready": bool(get_replicate_token()),
+        "replicate_installed": HAS_REPLICATE,
         "poisson_engine_ready": HAS_OPENCV,
         "max_upload_size_mb": MAX_FILE_SIZE_BYTES // (1024 * 1024)
     }
@@ -303,11 +397,14 @@ def model_info():
             "python_version": "Python 3.10",
             "pytorch_version": "PyTorch 1.13.1+"
         },
+        "cloud_gpu_options": {
+            "replicate_enabled": HAS_REPLICATE,
+            "replicate_configured": bool(get_replicate_token())
+        },
         "local_host_status": {
             "detected_gpu": GPU_INFO["device_name"],
             "vram_available_gb": GPU_INFO["vram_gb"],
-            "can_run_7gb_locally": GPU_INFO["vram_gb"] >= 12.0,
-            "solution_mode": "Hybrid (Official Remote HairFastGAN API + High-Performance Local Poisson Seamless Engine)"
+            "can_run_7gb_locally": GPU_INFO["vram_gb"] >= 12.0
         }
     }
 
@@ -318,6 +415,7 @@ class HairTransferPayload(BaseModel):
     style_photo_base64: Optional[str] = None
     color_hex: Optional[str] = None
     blending_mode: Optional[str] = "Article"
+    replicate_token: Optional[str] = None
 
 
 @app.post("/api/hair-transfer")
@@ -362,19 +460,35 @@ async def hair_transfer(
         face_img.save(temp_face_path, "PNG")
         style_img.save(temp_style_path, "PNG")
 
-        # 4. Attempt HairFastGAN Inference via official neural pipeline
-        result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
+        # 4. Attempt Inference via Replicate Cloud GPU or Hugging Face
+        result_img = None
+        model_name = "HairFastGAN (AIRI Institute / NeurIPS 2024)"
+        hw_info = GPU_INFO["device_name"]
+
+        rep_token = get_replicate_token()
+        if rep_token:
+            result_img = try_replicate_hair_transfer(temp_face_path, temp_style_path, rep_token)
+            if result_img:
+                model_name = "HairFastGAN / StyleYourHair (Replicate Cloud A100 GPU)"
+                hw_info = "Cloud NVIDIA A100 GPU"
 
         if result_img is None:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "HairFastGAN requires a 12GB–16GB dedicated GPU cluster (Linux) to run its 7.73 GB StyleGAN2 weights. "
-                    f"Detected local GPU: {GPU_INFO['device_name']} with {GPU_INFO['vram_gb']} GB VRAM (below the 12GB threshold). "
-                    "The upstream Hugging Face demonstration server is currently undergoing maintenance. "
-                    "To avoid generating distorted overlays or faking AI results, please use our Hairstyle Reference Studio."
+            result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
+
+        if result_img is None:
+            if not rep_token:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "To generate photorealistic AI hairstyles, please enter your Replicate API Token. "
+                        "Sign up for free at replicate.com/account/api-tokens and paste your token in .env or the AI Try-On settings."
+                    )
                 )
-            )
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Cloud GPU inference error on Replicate. Please verify your Replicate API Token and account balance."
+                )
 
         # 5. Encode result to Base64 JPEG
         buffered = BytesIO()
@@ -386,11 +500,11 @@ async def hair_transfer(
         return {
             "status": "success",
             "result_image": result_base64,
-            "model_used": "HairFastGAN (AIRI Institute / NeurIPS 2024)",
+            "model_used": model_name,
             "is_face_preserved": True,
-            "validation_message": "Genuine Neural GAN Hairstyle Transfer",
+            "validation_message": "Genuine Neural Model Hairstyle Transfer",
             "processing_time_ms": elapsed_ms,
-            "hardware_info": GPU_INFO["device_name"]
+            "hardware_info": hw_info
         }
 
     finally:
@@ -439,19 +553,35 @@ async def hair_transfer_json(payload: HairTransferPayload):
         face_img.save(temp_face_path, "PNG")
         style_img.save(temp_style_path, "PNG")
 
-        # Attempt genuine HairFastGAN neural network
-        result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
+        # Attempt genuine AI neural network via Replicate Cloud GPU or Hugging Face
+        result_img = None
+        model_name = "HairFastGAN (AIRI Institute / NeurIPS 2024)"
+        hw_info = GPU_INFO["device_name"]
+
+        rep_token = get_replicate_token(payload.replicate_token)
+        if rep_token:
+            result_img = try_replicate_hair_transfer(temp_face_path, temp_style_path, rep_token)
+            if result_img:
+                model_name = "HairFastGAN / StyleYourHair (Replicate Cloud A100 GPU)"
+                hw_info = "Cloud NVIDIA A100 GPU"
 
         if result_img is None:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "HairFastGAN requires a 12GB–16GB dedicated GPU cluster (Linux) to run its 7.73 GB StyleGAN2 weights. "
-                    f"Detected local GPU: {GPU_INFO['device_name']} with {GPU_INFO['vram_gb']} GB VRAM (below the 12GB threshold). "
-                    "The upstream Hugging Face demonstration server is currently undergoing maintenance. "
-                    "To avoid generating distorted overlays or faking AI results, please use our Hairstyle Reference Studio."
+            result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
+
+        if result_img is None:
+            if not rep_token:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "To generate photorealistic AI hairstyles, please enter your Replicate API Token. "
+                        "Sign up for free at replicate.com/account/api-tokens and paste your token in .env or the AI Try-On settings."
+                    )
                 )
-            )
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Cloud GPU inference error on Replicate. Please verify your Replicate API Token and account balance."
+                )
 
         buffered = BytesIO()
         result_img.save(buffered, format="JPEG", quality=95)
@@ -462,11 +592,11 @@ async def hair_transfer_json(payload: HairTransferPayload):
         return {
             "status": "success",
             "result_image": result_base64,
-            "model_used": "HairFastGAN (AIRI Institute / NeurIPS 2024)",
+            "model_used": model_name,
             "is_face_preserved": True,
-            "validation_message": "Genuine Neural GAN Hairstyle Transfer",
+            "validation_message": "Genuine Neural Model Hairstyle Transfer",
             "processing_time_ms": elapsed_ms,
-            "hardware_info": GPU_INFO["device_name"]
+            "hardware_info": hw_info
         }
 
     finally:

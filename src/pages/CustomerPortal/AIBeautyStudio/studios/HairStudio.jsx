@@ -57,8 +57,15 @@ export const HairStudio = ({
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiStatusMessage, setAiStatusMessage] = useState('');
   const [aiErrorMessage, setAiErrorMessage] = useState(null);
-  const [backendHealth, setBackendHealth] = useState({ online: false, gpuInfo: null, version: '2.0.0' });
+  const [backendHealth, setBackendHealth] = useState({ online: false, gpuInfo: null, version: '2.1.0' });
   const [isComparingAi, setIsComparingAi] = useState(false);
+  const [replicateToken, setReplicateToken] = useState(() => {
+    return localStorage.getItem('stylesync_replicate_token') || import.meta.env.VITE_REPLICATE_API_TOKEN || '';
+  });
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenInput, setTokenInput] = useState(() => {
+    return localStorage.getItem('stylesync_replicate_token') || import.meta.env.VITE_REPLICATE_API_TOKEN || '';
+  });
 
   // The active photo is either the top shared photo or local photo
   const currentPhoto = userPhoto || localPhoto;
@@ -136,6 +143,7 @@ export const HairStudio = ({
         userPhoto: currentPhoto,
         styleImage: activeStyle.image,
         colorHex: activeColor?.hex || 'transparent',
+        replicateToken: replicateToken,
         onStatusUpdate: (msg) => setAiStatusMessage(msg)
       });
 
@@ -146,9 +154,15 @@ export const HairStudio = ({
       }
     } catch (err) {
       console.warn('AI Try-On notice:', err);
-      setAiErrorMessage(
-        'The remote HairFastGAN GPU cluster is currently undergoing maintenance. The full 7.73 GB StyleGAN2 model requires an active 16GB VRAM GPU cluster. Please use our Hairstyle Reference Studio for accurate side-by-side stylist consultation.'
-      );
+      const errMsg = err?.message || '';
+      if (errMsg.includes('Replicate') || errMsg.includes('token') || errMsg.includes('Token')) {
+        setAiErrorMessage(errMsg);
+        setShowTokenModal(true);
+      } else {
+        setAiErrorMessage(
+          errMsg || 'The remote HairFastGAN GPU cluster is currently undergoing maintenance. The full 7.73 GB StyleGAN2 model requires an active 16GB VRAM GPU cluster.'
+        );
+      }
     } finally {
       setIsAiProcessing(false);
     }
@@ -673,6 +687,102 @@ export const HairStudio = ({
             </div>
           </div>
 
+          {/* ── Cloud GPU Connection Widget (Replicate HairFastGAN) ───────────── */}
+          <div className="bg-zinc-950/90 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${replicateToken ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' : 'bg-amber-400 shadow-[0_0_10px_#fbbf24] animate-pulse'}`} />
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    Cloud NVIDIA A100 GPU Engine (Replicate API)
+                  </h3>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase ${replicateToken ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
+                    {replicateToken ? 'Cloud GPU Connected' : 'Token Required'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  {replicateToken 
+                    ? 'Connected to Replicate Cloud A100 GPUs for photorealistic neural hairstyle transformations.'
+                    : 'To run real neural hairstyle predictions on your photo, enter your free Replicate API token (takes 30 seconds to get).'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowTokenModal(prev => !prev)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  replicateToken
+                    ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/10'
+                    : 'bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)]'
+                }`}
+              >
+                <Sliders size={13} />
+                <span>{replicateToken ? 'Edit Cloud GPU Key' : 'Connect Replicate Key'}</span>
+              </button>
+            </div>
+
+            {/* Token Input Dropdown */}
+            {showTokenModal && (
+              <div className="pt-4 border-t border-white/10 space-y-3 animate-fadeIn">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-semibold text-zinc-300">
+                      Replicate API Token (<code className="text-primary font-mono text-[11px]">r8_...</code>)
+                    </label>
+                    <a
+                      href="https://replicate.com/account/api-tokens"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-[11px] inline-flex items-center gap-1 font-bold"
+                    >
+                      Get your free token at replicate.com ↗
+                    </a>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="password"
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      placeholder="Paste your token here: r8_xxxxxxxxxxxxxxxxxxxx"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/15 text-white text-xs font-mono placeholder:text-zinc-600 focus:outline-none focus:border-primary"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const clean = tokenInput.trim();
+                          localStorage.setItem('stylesync_replicate_token', clean);
+                          setReplicateToken(clean);
+                          setShowTokenModal(false);
+                          setAiErrorMessage(null);
+                        }}
+                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer shadow-lg"
+                      >
+                        Save & Connect
+                      </button>
+                      {replicateToken && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.removeItem('stylesync_replicate_token');
+                            setReplicateToken('');
+                            setTokenInput('');
+                          }}
+                          className="px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-bold transition cursor-pointer"
+                        >
+                          Disconnect
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  Your token is stored safely in your local browser and sent directly to the local Python AI server (port 8001) to run HairFastGAN / StyleYourHair on cloud A100 GPUs.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* ── AI Try-On Interactive Workspace ───────────────────────────────── */}
           <div className="bg-zinc-950/80 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
             
@@ -806,16 +916,25 @@ export const HairStudio = ({
                 </div>
 
                 {aiErrorMessage && (
-                  <div className="p-3 bg-amber-950/60 border border-amber-500/30 rounded-xl text-xs text-amber-300 space-y-1">
-                    <strong className="block text-[11px] uppercase tracking-wider">Hardware / Network Notice:</strong>
+                  <div className="p-3.5 bg-amber-950/70 border border-amber-500/40 rounded-xl text-xs text-amber-300 space-y-2">
+                    <strong className="block text-[11px] uppercase tracking-wider font-bold">Cloud GPU / AI Status Notice:</strong>
                     <p className="text-[11px] leading-relaxed text-zinc-300">{aiErrorMessage}</p>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('reference')}
-                      className="mt-1 text-primary hover:underline font-bold text-[11px] inline-flex items-center gap-1"
-                    >
-                      Return to Hairstyle Reference Studio <ArrowRight size={11} />
-                    </button>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenModal(true)}
+                        className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold text-[11px] inline-flex items-center gap-1.5 shadow-md cursor-pointer"
+                      >
+                        <Sliders size={12} /> Configure Replicate Token
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('reference')}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        Explore Reference Studio <ArrowRight size={11} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
