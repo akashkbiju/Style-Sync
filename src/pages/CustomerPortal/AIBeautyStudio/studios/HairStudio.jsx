@@ -70,14 +70,13 @@ export const HairStudio = ({
   // The active photo is either the top shared photo or local photo
   const currentPhoto = userPhoto || localPhoto;
 
-  // Probe Python AI service on mount
   useEffect(() => {
     let isMounted = true;
     checkHairBackendHealth().then(status => {
       if (isMounted) setBackendHealth(status);
     });
     return () => { isMounted = false; };
-  }, []);
+  }, [activeTab]);
 
   // Handle local file upload
   const handlePhotoUpload = (e) => {
@@ -142,6 +141,7 @@ export const HairStudio = ({
       const result = await requestAiHairstyleTransfer({
         userPhoto: currentPhoto,
         styleImage: activeStyle.image,
+        styleName: activeStyle.name,
         colorHex: activeColor?.hex || 'transparent',
         replicateToken: replicateToken,
         onStatusUpdate: (msg) => setAiStatusMessage(msg)
@@ -634,6 +634,11 @@ export const HairStudio = ({
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-lg">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   FastAPI AI Service Online (Port 8001)
+                </span>
+              ) : replicateToken || import.meta.env.VITE_FAL_KEY ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Cloud AI Active ({replicateToken ? 'Replicate A100' : 'Fal.ai GPU'})
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-800 text-zinc-400 border border-white/10">

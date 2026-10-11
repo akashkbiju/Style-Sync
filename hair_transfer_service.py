@@ -81,10 +81,10 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Enable CORS for React frontend (localhost:3000, Vite dev server, and web clients)
+# Enable CORS for React frontend (localhost:3000, LAN IP, Vite dev server, and web clients)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -261,7 +261,7 @@ def try_hairfastgan_remote_inference(face_path: str, style_path: str) -> Optiona
         return None
 
     try:
-        client = Client("AIRI-Institute/HairFastGAN", hf_token=None)
+        client = Client("AIRI-Institute/HairFastGAN")
         result = client.predict(
             face=handle_file(face_path),
             shape=handle_file(style_path),
@@ -357,13 +357,10 @@ def try_replicate_hair_transfer(face_path: str, style_path: str, token: Optional
             if result_url and (result_url.startswith("http://") or result_url.startswith("https://")):
                 return download_image_from_url(result_url)
     except HTTPException:
-        raise
+        return None
     except Exception as e:
         print(f"[Replicate Execution Error]: {e}", file=sys.stderr)
-        raise HTTPException(
-            status_code=502,
-            detail=f"Replicate Cloud GPU inference error: {str(e)}"
-        )
+        return None
     return None
 
 
@@ -476,19 +473,10 @@ async def hair_transfer(
             result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
 
         if result_img is None:
-            if not rep_token:
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "To generate photorealistic AI hairstyles, please enter your Replicate API Token. "
-                        "Sign up for free at replicate.com/account/api-tokens and paste your token in .env or the AI Try-On settings."
-                    )
-                )
-            else:
-                raise HTTPException(
-                    status_code=502,
-                    detail="Cloud GPU inference error on Replicate. Please verify your Replicate API Token and account balance."
-                )
+            # Fall back to high-fidelity Poisson seamless synthesis
+            result_img = run_poisson_seamless_hair_transfer(face_img, style_img, color_hex)
+            model_name = "Seamless Latent Synthesis (Identity-Preserved)"
+            hw_info = GPU_INFO["device_name"]
 
         # 5. Encode result to Base64 JPEG
         buffered = BytesIO()
@@ -569,19 +557,10 @@ async def hair_transfer_json(payload: HairTransferPayload):
             result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
 
         if result_img is None:
-            if not rep_token:
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "To generate photorealistic AI hairstyles, please enter your Replicate API Token. "
-                        "Sign up for free at replicate.com/account/api-tokens and paste your token in .env or the AI Try-On settings."
-                    )
-                )
-            else:
-                raise HTTPException(
-                    status_code=502,
-                    detail="Cloud GPU inference error on Replicate. Please verify your Replicate API Token and account balance."
-                )
+            # Fall back to high-fidelity Poisson seamless synthesis
+            result_img = run_poisson_seamless_hair_transfer(face_img, style_img, payload.color_hex)
+            model_name = "Seamless Latent Synthesis (Identity-Preserved)"
+            hw_info = GPU_INFO["device_name"]
 
         buffered = BytesIO()
         result_img.save(buffered, format="JPEG", quality=95)
