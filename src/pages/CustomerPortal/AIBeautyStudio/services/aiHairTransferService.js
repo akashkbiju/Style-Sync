@@ -3,33 +3,62 @@
  * Bridges React frontend with Python FastAPI backend (HairFastGAN Neural Pipeline).
  */
 
-const BACKEND_URL = 'http://127.0.0.1:8001';
+const CANDIDATE_BACKEND_URLS = [
+  '/hair-api',
+  'http://localhost:8001',
+  'http://127.0.0.1:8001'
+];
+
+let resolvedBackendUrl = null;
+
+export const getActiveBackendUrl = async () => {
+  if (resolvedBackendUrl) return resolvedBackendUrl;
+
+  for (const url of CANDIDATE_BACKEND_URLS) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(`${url}/health`, { method: 'GET', signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        resolvedBackendUrl = url;
+        return url;
+      }
+    } catch (e) {}
+  }
+  return CANDIDATE_BACKEND_URLS[0];
+};
 
 /**
  * Checks if the local Python AI Hair Transfer service is running.
  */
 export const checkHairBackendHealth = async () => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+  for (const url of CANDIDATE_BACKEND_URLS) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const res = await fetch(`${BACKEND_URL}/health`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+      const res = await fetch(`${url}/health`, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        online: true,
-        gpuInfo: data.gpu_info || null,
-        hairfastganReady: data.hairfastgan_ready,
-        version: data.version
-      };
+      if (res.ok) {
+        resolvedBackendUrl = url;
+        const data = await res.json();
+        return {
+          online: true,
+          gpuInfo: data.gpu_info || null,
+          hairfastganReady: data.hairfastgan_ready,
+          replicateReady: data.replicate_ready,
+          version: data.version,
+          activeUrl: url
+        };
+      }
+    } catch (err) {
+      // try next candidate URL
     }
-  } catch (err) {
-    // Backend offline or unreachable
   }
 
   return { online: false, gpuInfo: null, hairfastganReady: false };
@@ -84,7 +113,8 @@ export const requestAiHairstyleTransfer = async ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 90000);
 
-      const res = await fetch(`${BACKEND_URL}/api/hair-transfer-json`, {
+      const targetUrl = health.activeUrl || (await getActiveBackendUrl());
+      const res = await fetch(`${targetUrl}/api/hair-transfer-json`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
