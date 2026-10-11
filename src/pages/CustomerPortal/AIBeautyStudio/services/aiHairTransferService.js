@@ -1,10 +1,7 @@
 /**
  * StyleSync AI Hairstyle Transfer Client Service
- * Bridges React frontend with Python FastAPI backend (HairFastGAN / Poisson Engine)
- * with graceful fallback to browser MediaPipe landmark guard.
+ * Bridges React frontend with Python FastAPI backend (HairFastGAN Neural Pipeline).
  */
-
-import { blendPhotographicHairstyle } from './beautyCanvasService';
 
 const BACKEND_URL = 'http://127.0.0.1:8001';
 
@@ -96,33 +93,21 @@ export const requestAiHairstyleTransfer = async ({
         return {
           resultImageUrl: data.result_image,
           isFacePreserved: data.is_face_preserved !== false,
-          modelUsed: data.model_used || 'HairFastGAN / Poisson Seamless',
-          validationMessage: data.validation_message || 'Face 100% Preserved',
+          modelUsed: data.model_used || 'HairFastGAN (Neural GAN)',
+          validationMessage: data.validation_message || 'Genuine Neural Model Transfer',
           processingTimeMs: data.processing_time_ms || 0,
-          hardwareInfo: data.hardware_info || 'AI Backend'
+          hardwareInfo: data.hardware_info || 'GPU Backend'
         };
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error (${res.status})`);
       }
+    } else {
+      throw new Error(
+        'Python AI Hairstyle Transfer Service is offline. Please start hair_transfer_service.py on port 8001.'
+      );
     }
   } catch (err) {
-    console.warn('Python AI service call notice:', err.message);
+    throw err;
   }
-
-  // Step 2: Fallback to high-fidelity in-browser MediaPipe FaceLandmarker guard
-  onStatusUpdate('Rendering with Client-Side Face Landmark Guard...');
-  const clientResult = await blendPhotographicHairstyle({
-    userImageSrc: userPhoto,
-    styleImageSrc: styleImage,
-    colorHex: colorHex || 'transparent',
-    verticalOffset,
-    scaleOffset
-  });
-
-  return {
-    resultImageUrl: clientResult.resultImageUrl || userPhoto,
-    isFacePreserved: clientResult.isFacePreserved !== false,
-    modelUsed: 'Client-Side MediaPipe Landmark Guard',
-    validationMessage: clientResult.validationMessage || 'Face Preserved',
-    processingTimeMs: 45,
-    hardwareInfo: 'Browser Engine'
-  };
 };

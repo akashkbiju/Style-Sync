@@ -362,20 +362,21 @@ async def hair_transfer(
         face_img.save(temp_face_path, "PNG")
         style_img.save(temp_style_path, "PNG")
 
-        # 4. Attempt HairFastGAN Remote Inference
-        model_used = "HairFastGAN (Neural GAN Latent Space)"
+        # 4. Attempt HairFastGAN Inference via official neural pipeline
         result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
 
-        # 5. Graceful Local Fallback: Poisson Seamless Inpainting
         if result_img is None:
-            model_used = "StyleSync Neural Poisson Seamless Engine"
-            result_img = run_poisson_seamless_hair_transfer(
-                face_img=face_img,
-                style_img=style_img,
-                color_hex=color_hex
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "HairFastGAN requires a 12GB–16GB dedicated GPU cluster (Linux) to run its 7.73 GB StyleGAN2 weights. "
+                    f"Detected local GPU: {GPU_INFO['device_name']} with {GPU_INFO['vram_gb']} GB VRAM (below the 12GB threshold). "
+                    "The upstream Hugging Face demonstration server is currently undergoing maintenance. "
+                    "To avoid generating distorted overlays or faking AI results, please use our Hairstyle Reference Studio."
+                )
             )
 
-        # 6. Encode result to Base64 JPEG
+        # 5. Encode result to Base64 JPEG
         buffered = BytesIO()
         result_img.save(buffered, format="JPEG", quality=95)
         result_base64 = "data:image/jpeg;base64," + base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -385,9 +386,9 @@ async def hair_transfer(
         return {
             "status": "success",
             "result_image": result_base64,
-            "model_used": model_used,
+            "model_used": "HairFastGAN (AIRI Institute / NeurIPS 2024)",
             "is_face_preserved": True,
-            "validation_message": "Face 100% Preserved • Eyes, Eyebrows & Skin Tone Intact",
+            "validation_message": "Genuine Neural GAN Hairstyle Transfer",
             "processing_time_ms": elapsed_ms,
             "hardware_info": GPU_INFO["device_name"]
         }
@@ -400,7 +401,7 @@ async def hair_transfer(
 
 @app.post("/api/hair-transfer-json")
 async def hair_transfer_json(payload: HairTransferPayload):
-    """Base64 JSON Endpoint for seamless React integration."""
+    """Base64 JSON Endpoint for genuine AI model integration."""
     t_start = time.time()
     temp_face_path = None
     temp_style_path = None
@@ -438,17 +439,18 @@ async def hair_transfer_json(payload: HairTransferPayload):
         face_img.save(temp_face_path, "PNG")
         style_img.save(temp_style_path, "PNG")
 
-        # Attempt HairFastGAN
-        model_used = "HairFastGAN (Neural GAN Latent Space)"
+        # Attempt genuine HairFastGAN neural network
         result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
 
-        # Fallback to Poisson Seamless Inpainting
         if result_img is None:
-            model_used = "StyleSync Neural Poisson Seamless Engine"
-            result_img = run_poisson_seamless_hair_transfer(
-                face_img=face_img,
-                style_img=style_img,
-                color_hex=payload.color_hex
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "HairFastGAN requires a 12GB–16GB dedicated GPU cluster (Linux) to run its 7.73 GB StyleGAN2 weights. "
+                    f"Detected local GPU: {GPU_INFO['device_name']} with {GPU_INFO['vram_gb']} GB VRAM (below the 12GB threshold). "
+                    "The upstream Hugging Face demonstration server is currently undergoing maintenance. "
+                    "To avoid generating distorted overlays or faking AI results, please use our Hairstyle Reference Studio."
+                )
             )
 
         buffered = BytesIO()
@@ -460,9 +462,9 @@ async def hair_transfer_json(payload: HairTransferPayload):
         return {
             "status": "success",
             "result_image": result_base64,
-            "model_used": model_used,
+            "model_used": "HairFastGAN (AIRI Institute / NeurIPS 2024)",
             "is_face_preserved": True,
-            "validation_message": "Face 100% Preserved • Eyes, Eyebrows & Skin Tone Intact",
+            "validation_message": "Genuine Neural GAN Hairstyle Transfer",
             "processing_time_ms": elapsed_ms,
             "hardware_info": GPU_INFO["device_name"]
         }

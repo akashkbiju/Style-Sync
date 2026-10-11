@@ -59,19 +59,23 @@ export const FACE_SHAPES = [
 ];
 
 export const HAIRSTYLES = [
-  // ── Women / Long / Medium / Short ──────────────────────────────────────────
+  // ── Women / Long / Medium / Short / Curly / Layered ───────────────────────
   {
     id: 'w-long-layered-waves',
     name: 'Voluminous Butterfly Layers',
     gender: 'women',
     length: 'long',
     texture: 'wavy',
+    category: 'layered',
     faceShapes: ['Oval', 'Square', 'Oblong', 'Heart'],
     description: 'Cascading butterfly layers designed for maximum bounce, movement, and face-framing softness.',
     stylistTip: 'Blow-dry with a 45mm round ceramic brush and finish with lightweight texturizing mist.',
     image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 6-8 weeks',
-    tags: ['Popular', 'Trending', 'Glamour']
+    availableService: 'Signature Butterfly Layer Cut & Blowdry',
+    servicePrice: '$55',
+    serviceDuration: '50 min',
+    tags: ['Layered', 'Long', 'Popular', 'Trending']
   },
   {
     id: 'w-french-bob',
@@ -79,12 +83,16 @@ export const HAIRSTYLES = [
     gender: 'women',
     length: 'short',
     texture: 'straight',
+    category: 'short',
     faceShapes: ['Oval', 'Heart', 'Diamond'],
     description: 'Chic Parisian chin-skimming bob paired with wispy eyebrow-grazing fringe.',
     stylistTip: 'Air dry with a drop of argan hair serum for understated effortless Parisian sheen.',
     image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 4-5 weeks',
-    tags: ['Classic', 'Chic']
+    availableService: 'Parisian French Bob Precision Cut',
+    servicePrice: '$48',
+    serviceDuration: '45 min',
+    tags: ['Short', 'Chic', 'Classic']
   },
   {
     id: 'w-curtain-bangs-lob',
@@ -92,12 +100,16 @@ export const HAIRSTYLES = [
     gender: 'women',
     length: 'medium',
     texture: 'wavy',
+    category: 'medium',
     faceShapes: ['Oval', 'Round', 'Square', 'Heart', 'Diamond'],
     description: 'Shoulder-grazing textured long bob featuring soft 70s-inspired cheekbone curtain bangs.',
     stylistTip: 'Pinch curtain bangs at the cheekbone peak while diffusing for instant contouring.',
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 6 weeks',
-    tags: ['Most Loved', 'Versatile']
+    availableService: 'Textured Lob & Curtain Fringe Styling',
+    servicePrice: '$50',
+    serviceDuration: '45 min',
+    tags: ['Medium', 'Most Loved', 'Versatile']
   },
   {
     id: 'w-curly-shag',
@@ -105,12 +117,16 @@ export const HAIRSTYLES = [
     gender: 'women',
     length: 'medium',
     texture: 'curly',
+    category: 'curly',
     faceShapes: ['Oval', 'Square', 'Heart', 'Diamond'],
     description: 'Dynamic multi-layered shag specifically shaped for natural curly and coily volume.',
     stylistTip: 'Apply curl defining cream on soaking wet hair using the praying-hands method.',
     image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 8 weeks',
-    tags: ['Natural Texture', 'Volume']
+    availableService: 'Curl Sculpting & Diffused Definition Cut',
+    servicePrice: '$58',
+    serviceDuration: '60 min',
+    tags: ['Curly', 'Medium', 'Natural Texture', 'Volume']
   },
   {
     id: 'w-sleek-glass-hair',
@@ -118,12 +134,16 @@ export const HAIRSTYLES = [
     gender: 'women',
     length: 'long',
     texture: 'straight',
+    category: 'long',
     faceShapes: ['Oval', 'Round', 'Heart'],
     description: 'Precision one-length long cut polished to high-reflective mirror glass gloss.',
     stylistTip: 'Requires heat protector and keratin smoothing booster before ceramic pass.',
     image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Smooth treatment every 3 months',
-    tags: ['Luxury', 'Minimalist']
+    availableService: 'Glass Hair Silk Press & Precision Trim',
+    servicePrice: '$65',
+    serviceDuration: '60 min',
+    tags: ['Long', 'Luxury', 'Minimalist']
   },
   {
     id: 'w-pixie-crop',
@@ -131,27 +151,35 @@ export const HAIRSTYLES = [
     gender: 'women',
     length: 'short',
     texture: 'straight',
+    category: 'short',
     faceShapes: ['Oval', 'Heart', 'Diamond'],
     description: 'Bold feminine pixie with feathered crown texture and soft tapered nape.',
     stylistTip: 'Style with matte styling paste worked through fingers for piecey definition.',
     image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 3-4 weeks',
-    tags: ['Bold', 'Low Maintenance']
+    availableService: 'Textured Pixie Cut & Crown Sculpt',
+    servicePrice: '$42',
+    serviceDuration: '35 min',
+    tags: ['Short', 'Bold', 'Low Maintenance']
   },
 
-  // ── Men / Grooming / Short / Medium ────────────────────────────────────────
+  // ── Men / Grooming / Short / Medium / Curly / Fade ─────────────────────────
   {
     id: 'm-textured-crop-fade',
     name: 'Textured Crop with Mid Skin Fade',
     gender: 'men',
     length: 'short',
     texture: 'straight',
+    category: 'men',
     faceShapes: ['Oval', 'Square', 'Round', 'Diamond'],
     description: 'Contemporary European textured French crop paired with precision blurry mid skin fade.',
     stylistTip: 'Dust lightweight matte styling powder into roots and scrunch with fingertips.',
     image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Fade cleanup every 2-3 weeks',
-    tags: ['Top Trend', 'Low Maintenance']
+    availableService: 'Master Barber Fade & French Crop',
+    servicePrice: '$35',
+    serviceDuration: '30 min',
+    tags: ['Men', 'Short', 'Top Trend', 'Low Maintenance']
   },
   {
     id: 'm-classic-pompadour',
@@ -159,12 +187,16 @@ export const HAIRSTYLES = [
     gender: 'men',
     length: 'medium',
     texture: 'straight',
+    category: 'men',
     faceShapes: ['Oval', 'Round', 'Square'],
     description: 'High-lift sculpted pompadour tapering neatly down to blended scissor-over-comb sides.',
     stylistTip: 'Pre-style with sea salt spray and lock the front quiff using water-soluble medium pomade.',
     image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 3-4 weeks',
-    tags: ['Executive', 'Polished']
+    availableService: 'Executive Scissor Cut & Pompadour Blowout',
+    servicePrice: '$40',
+    serviceDuration: '40 min',
+    tags: ['Men', 'Medium', 'Executive', 'Polished']
   },
   {
     id: 'm-wavy-curtains',
@@ -172,12 +204,16 @@ export const HAIRSTYLES = [
     gender: 'men',
     length: 'medium',
     texture: 'wavy',
+    category: 'medium',
     faceShapes: ['Oval', 'Heart', 'Diamond', 'Square'],
     description: 'Relaxed center-parted layered curtain flow with natural ear-tucking movement.',
     stylistTip: 'Apply lightweight leave-in moisturizing conditioner and let dry naturally.',
     image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 6 weeks',
-    tags: ['Casual', 'Trending']
+    availableService: 'Curtain Flow Layered Cut & Texturizing',
+    servicePrice: '$38',
+    serviceDuration: '35 min',
+    tags: ['Medium', 'Men', 'Casual', 'Trending']
   },
   {
     id: 'm-curly-taper-fade',
@@ -185,12 +221,16 @@ export const HAIRSTYLES = [
     gender: 'men',
     length: 'short',
     texture: 'curly',
+    category: 'curly',
     faceShapes: ['Oval', 'Square', 'Oblong'],
     description: 'High volume defined natural curl canopy with ultra-clean temple and neckline tapers.',
     stylistTip: 'Hydrate with curl foam and avoid comb brushing when dry to prevent frizz.',
     image: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Taper refresh every 2 weeks',
-    tags: ['Definition', 'Sharp']
+    availableService: 'Curl Definition & High Taper Fade',
+    servicePrice: '$38',
+    serviceDuration: '35 min',
+    tags: ['Curly', 'Men', 'Definition', 'Sharp']
   },
   {
     id: 'm-buzz-lineup',
@@ -198,12 +238,16 @@ export const HAIRSTYLES = [
     gender: 'men',
     length: 'short',
     texture: 'straight',
+    category: 'short',
     faceShapes: ['Oval', 'Square', 'Diamond'],
     description: 'Ultra-clean #2 clipper uniform buzz finished with laser-sharp straight razor edge work.',
     stylistTip: 'Maintain with daily scalp moisturizer and SPF 50 sunscreen.',
     image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 2 weeks',
-    tags: ['Ultra Sharp', 'Athletic']
+    availableService: 'Precision Buzz Cut & Razor Lineup',
+    servicePrice: '$28',
+    serviceDuration: '25 min',
+    tags: ['Short', 'Men', 'Ultra Sharp', 'Athletic']
   },
   {
     id: 'm-side-part-fade',
@@ -211,12 +255,16 @@ export const HAIRSTYLES = [
     gender: 'men',
     length: 'short',
     texture: 'straight',
+    category: 'men',
     faceShapes: ['Oval', 'Square', 'Oblong', 'Heart'],
     description: 'Timeless tailored gentleman side parting with clean tapered sides and natural shine.',
     stylistTip: 'Comb through with styling cream when damp for a sophisticated all-day hold.',
     image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=700&q=80',
     maintenance: 'Trim every 3 weeks',
-    tags: ['Business', 'Classic']
+    availableService: 'Classic Gentleman Cut & Hot Towel Finish',
+    servicePrice: '$36',
+    serviceDuration: '30 min',
+    tags: ['Short', 'Men', 'Business', 'Classic']
   }
 ];
 
