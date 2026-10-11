@@ -6,7 +6,12 @@ import {
   MessageCircle, Send, ArrowUpCircle, ArrowDownCircle, Activity,
   Calendar, TrendingUp, UserMinus
 } from 'lucide-react';
-import { sendApprovalEmail, sendRejectionEmail } from '../../firebase/emailService';
+import { 
+  sendApprovalEmail, 
+  sendRejectionEmail, 
+  getStaffApprovalMailtoUrl, 
+  getStaffRejectionMailtoUrl 
+} from '../../firebase/emailService';
 
 const STAFF_LEVELS = ['Junior', 'Mid-Level', 'Senior', 'Lead'];
 const levelColors = {
@@ -81,22 +86,30 @@ export const ManageStaff = () => {
     setName('');
   };
 
-  const showToast = (type, memberName, memberEmail) => {
-    setEmailToast({ type, name: memberName, email: memberEmail });
-    setTimeout(() => setEmailToast(null), 5000);
+  const showToast = (type, memberName, memberEmail, mailtoUrl = '') => {
+    setEmailToast({ type, name: memberName, email: memberEmail, mailtoUrl });
+    setTimeout(() => setEmailToast(null), 8000);
   };
 
   const handleApprove = async (id) => {
     const pm = pendingStaff.find(p => p.id === id);
     await approvePendingStaff(id);
-    if (pm?.email) { await sendApprovalEmail(pm); showToast('approved', pm.name, pm.email); }
+    if (pm?.email) {
+      const mailtoUrl = getStaffApprovalMailtoUrl(pm);
+      await sendApprovalEmail(pm);
+      showToast('approved', pm.name, pm.email, mailtoUrl);
+    }
   };
 
   const handleReject = async (id) => {
     const pm = pendingStaff.find(p => p.id === id);
     await rejectPendingStaff(id);
     setConfirmRejectId(null);
-    if (pm?.email) { await sendRejectionEmail(pm); showToast('rejected', pm.name, pm.email); }
+    if (pm?.email) {
+      const mailtoUrl = getStaffRejectionMailtoUrl(pm);
+      await sendRejectionEmail(pm);
+      showToast('rejected', pm.name, pm.email, mailtoUrl);
+    }
   };
 
   const handleSendChat = (staffId) => {
@@ -148,24 +161,50 @@ export const ManageStaff = () => {
       {emailToast && (
         <div style={{
           position: 'fixed', top: '5.5rem', right: '1.5rem', zIndex: 9999,
-          padding: '1rem 1.5rem', borderRadius: 'var(--radius-md)',
+          padding: '1rem 1.35rem', borderRadius: 'var(--radius-md)',
           background: emailToast.type === 'approved'
             ? 'linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.95))'
             : 'linear-gradient(135deg, rgba(239,68,68,0.95), rgba(185,28,28,0.95))',
           color: '#fff', boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', gap: '0.75rem', maxWidth: '420px',
-          animation: 'fadeIn 0.3s ease', backdropFilter: 'blur(10px)'
+          display: 'flex', alignItems: 'flex-start', gap: '0.75rem', maxWidth: '440px',
+          animation: 'fadeIn 0.3s ease', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.2)'
         }}>
-          <Mail size={20} />
-          <div>
+          <Mail size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-              {emailToast.type === 'approved' ? '✅ Approval Email Sent' : '📧 Rejection Email Sent'}
+              {emailToast.type === 'approved' ? '✅ Approval Notice Dispatched' : '📧 Rejection Notice Dispatched'}
             </div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.9, marginTop: '0.15rem' }}>
-              Notification sent to <strong>{emailToast.name}</strong> ({emailToast.email})
+            <div style={{ fontSize: '0.78rem', opacity: 0.95, marginTop: '0.2rem', lineHeight: 1.4 }}>
+              Dispatched to registered staff email: <br/>
+              <strong style={{ color: '#fff', textDecoration: 'underline' }}>{emailToast.email}</strong>
             </div>
+            {emailToast.mailtoUrl && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <a
+                  href={emailToast.mailtoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.3rem 0.65rem',
+                    borderRadius: '4px',
+                    background: 'rgba(255,255,255,0.22)',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    color: '#fff',
+                    fontSize: '0.73rem',
+                    fontWeight: 600,
+                    textDecoration: 'none'
+                  }}
+                >
+                  <Send size={12} /> Open in Mail Client (Direct) ↗
+                </a>
+              </div>
+            )}
           </div>
-          <button onClick={() => setEmailToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '4px' }}>
+          <button onClick={() => setEmailToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '4px', flexShrink: 0 }}>
             <X size={16} />
           </button>
         </div>

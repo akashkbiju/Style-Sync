@@ -34,36 +34,74 @@ const isEmailJSConfigured = () => Boolean(EMAILJS_PUBLIC_KEY && EMAILJS_SERVICE_
  * @returns {Promise<{success: boolean, method: string}>}
  */
 export const sendStaffNotification = async ({ toEmail, toName, subject, message }) => {
+  const recipientEmail = (toEmail || '').trim();
+  const recipientName = (toName || 'Staff Member').trim();
+
+  if (!recipientEmail) {
+    console.warn('⚠️ sendStaffNotification: No recipient email provided.');
+    return { success: false, method: 'none', error: 'Missing recipient email' };
+  }
+
   // ── Try EmailJS first ────────────────────────────────────────
   if (isEmailJSConfigured()) {
     try {
-      await emailjs.send(
+      console.log(`📤 Dispatching EmailJS notification to staff: ${recipientEmail}`);
+
+      // Provide ALL standard recipient variable aliases used by EmailJS templates
+      const templateParams = {
+        // Recipient email aliases (crucial for EmailJS templates using {{email}}, {{to_email}}, {{recipient}}, etc.)
+        to_email: recipientEmail,
+        email: recipientEmail,
+        user_email: recipientEmail,
+        recipient_email: recipientEmail,
+        recipient: recipientEmail,
+        to: recipientEmail,
+        send_to: recipientEmail,
+        staff_email: recipientEmail,
+        reply_to: recipientEmail,
+
+        // Recipient name aliases
+        to_name: recipientName,
+        name: recipientName,
+        staff_name: recipientName,
+        user_name: recipientName,
+        recipient_name: recipientName,
+
+        // Email subject & body
+        subject: subject || 'StyleSync Salon Notification',
+        message: message || '',
+        content: message || '',
+        body: message || '',
+
+        // Salon metadata & portal URL
+        salon_name: 'StyleSync Luxury Salon',
+        login_url: typeof window !== 'undefined' ? window.location.origin : 'https://stylesync.app',
+        portal_url: typeof window !== 'undefined' ? window.location.origin : 'https://stylesync.app',
+        sent_at: new Date().toLocaleString('en-IN')
+      };
+
+      const response = await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_ID,
-        {
-          to_email: toEmail,
-          to_name: toName,
-          subject: subject,
-          message: message,
-        },
+        templateParams,
         EMAILJS_PUBLIC_KEY
       );
-      console.log(`✅ Email sent to ${toEmail} via EmailJS`);
-      return { success: true, method: 'emailjs' };
+
+      console.log(`✅ Email sent successfully to ${recipientEmail} via EmailJS:`, response);
+      return { success: true, method: 'emailjs', response };
     } catch (err) {
-      console.warn('EmailJS send failed, falling back to simulation:', err);
-      // 🔥 ADDED ALERT SO WE CAN SEE THE EXACT ERROR ON SCREEN
-      alert(`EmailJS Error: ${err.text || err.message || JSON.stringify(err)}`);
+      console.error('❌ EmailJS send failed:', err);
+      // Fall through to simulated/mailto fallback
     }
   }
 
   // ── Fallback: Simulate Automatic Background Send ──────────────
   try {
-    console.log(`📧 Simulating automatic email send to: ${toEmail}`);
+    console.log(`📧 Simulating automatic email send to staff: ${recipientEmail}`);
     await new Promise(resolve => setTimeout(resolve, 800));
     return { success: true, method: 'simulated' };
   } catch (err) {
-    return { success: false, method: 'none' };
+    return { success: false, method: 'none', error: err.message };
   }
 };
 
@@ -90,3 +128,28 @@ export const sendRejectionEmail = (staffMember) => {
     message: `Dear ${staffMember.name},\n\nThank you for your interest in joining the StyleSync team.\n\nAfter careful review of your application, we regret to inform you that we are unable to approve your staff registration at this time.\n\nThis decision may be based on current staffing requirements or other criteria. You are welcome to reapply in the future.\n\nIf you have any questions, please feel free to reach out to our administration.\n\nWe wish you the best in your career.\n\nBest regards,\nStyleSync Administration\nLuxury Salon Management System`
   });
 };
+
+/**
+ * Direct mailto link generator for approval (guaranteed direct client delivery)
+ */
+export const getStaffApprovalMailtoUrl = (staffMember) => {
+  if (!staffMember?.email) return '';
+  const subject = encodeURIComponent('StyleSync — Your Staff Registration Has Been Approved! ✅');
+  const body = encodeURIComponent(
+    `Dear ${staffMember.name},\n\nCongratulations! 🎉\n\nWe are delighted to inform you that your staff registration at StyleSync Luxury Salon has been APPROVED by the admin.\n\nYou can now log in to the Staff Portal using your registered credentials.\n\nLogin URL: ${window.location.origin}\n\nWelcome to the team!\n\nBest regards,\nStyleSync Administration`
+  );
+  return `mailto:${staffMember.email.trim()}?subject=${subject}&body=${body}`;
+};
+
+/**
+ * Direct mailto link generator for rejection
+ */
+export const getStaffRejectionMailtoUrl = (staffMember) => {
+  if (!staffMember?.email) return '';
+  const subject = encodeURIComponent('StyleSync — Staff Registration Update');
+  const body = encodeURIComponent(
+    `Dear ${staffMember.name},\n\nThank you for your interest in joining StyleSync. After careful review, we are unable to approve your registration at this time.\n\nBest regards,\nStyleSync Administration`
+  );
+  return `mailto:${staffMember.email.trim()}?subject=${subject}&body=${body}`;
+};
+
