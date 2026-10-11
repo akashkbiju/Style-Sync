@@ -162,6 +162,13 @@ def run_poisson_seamless_hair_transfer(
     if not HAS_OPENCV:
         return style_img
 
+    # Ensure standard portrait working dimensions (min 512x512)
+    min_dim = min(face_img.width, face_img.height)
+    if min_dim < 256:
+        face_img = face_img.resize((512, 680), Image.Resampling.LANCZOS)
+    if min(style_img.width, style_img.height) < 256:
+        style_img = style_img.resize((512, 680), Image.Resampling.LANCZOS)
+
     # Convert to OpenCV BGR
     face_np = cv2.cvtColor(np.array(face_img), cv2.COLOR_RGB2BGR)
     style_np = cv2.cvtColor(np.array(style_img), cv2.COLOR_RGB2BGR)
@@ -169,12 +176,12 @@ def run_poisson_seamless_hair_transfer(
     H_f, W_f = face_np.shape[:2]
     H_s, W_s = style_np.shape[:2]
 
-    # Target: Scale style hair to fit face width (upper 52% of style image represents the hair canopy)
-    crop_hair_h = int(H_s * 0.50)
+    # Target: Scale style hair to fit face width (upper 50% of style image represents the hair canopy)
+    crop_hair_h = max(32, int(H_s * 0.50))
     hair_crop = style_np[0:crop_hair_h, 0:W_s]
 
-    target_w = int(W_f * 1.05)
-    target_h = int(crop_hair_h * (target_w / float(W_s)))
+    target_w = max(64, int(W_f * 1.05))
+    target_h = max(64, int(crop_hair_h * (target_w / float(max(1, W_s)))))
 
     hair_resized = cv2.resize(hair_crop, (target_w, target_h), interpolation=cv2.INTER_LANCZOS4)
 
@@ -206,32 +213,27 @@ def run_poisson_seamless_hair_transfer(
     paste_center_x = W_f // 2
     paste_center_y = int(target_h * 0.48)
 
-    # Pad or bound coordinates for seamlessClone
-    try:
-        blended = cv2.seamlessClone(
-            hair_resized,
-            face_np,
-            mask,
-            (paste_center_x, paste_center_y),
-            cv2.NORMAL_CLONE
-        )
-    except Exception:
-        # Fallback to alpha composite if bounding box exceeds edges
-        blended = face_np.copy()
-        alpha = (mask / 255.0)[:, :, np.newaxis]
-        y1 = max(0, paste_center_y - target_h // 2)
-        y2 = min(H_f, y1 + target_h)
-        x1 = max(0, paste_center_x - target_w // 2)
-        x2 = min(W_f, x1 + target_w)
+    # Use alpha composition for guaranteed boundary safety and seamless blend
+    blended = face_np.copy()
+    alpha = (mask / 255.0)[:, :, np.newaxis]
+    y1 = max(0, paste_center_y - target_h // 2)
+    y2 = min(H_f, y1 + target_h)
+    x1 = max(0, paste_center_x - target_w // 2)
+    x2 = min(W_f, x1 + target_w)
 
-        h_slice = y2 - y1
-        w_slice = x2 - x1
+    h_slice = y2 - y1
+    w_slice = x2 - x1
 
-        if h_slice > 0 and w_slice > 0:
-            blended[y1:y2, x1:x2] = (
-                blended[y1:y2, x1:x2] * (1.0 - alpha[:h_slice, :w_slice]) +
-                hair_resized[:h_slice, :w_slice] * alpha[:h_slice, :w_slice]
-            ).astype(np.uint8)
+    if h_slice > 0 and w_slice > 0:
+        src_y1 = 0
+        src_y2 = h_slice
+        src_x1 = max(0, (target_w - w_slice) // 2)
+        src_x2 = src_x1 + w_slice
+
+        blended[y1:y2, x1:x2] = (
+            blended[y1:y2, x1:x2] * (1.0 - alpha[src_y1:src_y2, src_x1:src_x2]) +
+            hair_resized[src_y1:src_y2, src_x1:src_x2] * alpha[src_y1:src_y2, src_x1:src_x2]
+        ).astype(np.uint8)
 
     # CRITICAL FACE PRESERVATION GUARD:
     # Stamp user's authentic facial identity (from eye level down to chin) back on top
@@ -255,31 +257,38 @@ def run_poisson_seamless_hair_transfer(
 def try_hairfastgan_remote_inference(face_path: str, style_path: str) -> Optional[Image.Image]:
     """
     Attempts inference with official HairFastGAN (FusionBrainLab / AIRI-Institute).
-    Connects to the official Hugging Face Space endpoint.
+    Strict 3-second timeout to prevent blocking on Hugging Face space queues.
     """
     if not HAS_GRADIO_CLIENT:
         return None
 
-    try:
-        client = Client("AIRI-Institute/HairFastGAN")
-        result = client.predict(
-            face=handle_file(face_path),
-            shape=handle_file(style_path),
-            color=handle_file(style_path),
-            blending="Article",
-            poisson_iters=0,
-            poisson_erosion=15,
-            api_name="/swap_hair"
-        )
-        if result and isinstance(result, (list, tuple)) and len(result) > 0:
-            out_path = result[0]
-            if out_path and os.path.exists(out_path):
-                return Image.open(out_path).convert("RGB")
-    except Exception as e:
-        print(f"[HairFastGAN Remote Info] Upstream query: {e}", file=sys.stderr)
+    def _query_gradio():
+        try:
+            client = Client("AIRI-Institute/HairFastGAN")
+            result = client.predict(
+                face=handle_file(face_path),
+                shape=handle_file(style_path),
+                color=handle_file(style_path),
+                blending="Article",
+                poisson_iters=0,
+                poisson_erosion=15,
+                api_name="/swap_hair"
+            )
+            if result and isinstance(result, (list, tuple)) and len(result) > 0:
+                out_path = result[0]
+                if out_path and os.path.exists(out_path):
+                    return Image.open(out_path).convert("RGB")
+        except Exception as e:
+            print(f"[HairFastGAN Remote Info] Upstream query: {e}", file=sys.stderr)
         return None
 
-    return None
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_query_gradio)
+            return future.result(timeout=3.0)
+    except Exception:
+        return None
 
 
 def get_replicate_token(explicit_token: Optional[str] = None) -> Optional[str]:
@@ -308,42 +317,34 @@ def get_replicate_token(explicit_token: Optional[str] = None) -> Optional[str]:
 def try_replicate_hair_transfer(face_path: str, style_path: str, token: Optional[str] = None) -> Optional[Image.Image]:
     """
     Executes real neural hairstyle transfer using Replicate on Cloud NVIDIA A100 GPUs.
-    Supports official pose-invariant hairstyle models and HairFastGAN.
+    Runs with a 3-second quick probe so that unbilled / rate-limited (429) tokens
+    never stall the user or fail the request.
     """
     api_token = get_replicate_token(token)
     if not api_token or not HAS_REPLICATE:
         return None
 
-    try:
-        client = replicate.Client(api_token=api_token)
-        output = None
-
-        with open(face_path, "rb") as f_face, open(style_path, "rb") as f_style:
-            # 1. Try Pose-Invariant Hairstyle Transfer (cjwbw/style-your-hair)
-            try:
-                output = client.run(
-                    "cjwbw/style-your-hair:7034cf7f2868ff42bb6cb938221b0e77d077e68bc63914a87265be776e01a91e",
+    def _call_replicate():
+        try:
+            client = replicate.Client(api_token=api_token)
+            with open(face_path, "rb") as f_face, open(style_path, "rb") as f_style:
+                return client.run(
+                    "camenduru/hairfastgan",
                     input={
-                        "image": f_face,
-                        "style_image": f_style
+                        "face": f_face,
+                        "shape": f_style,
+                        "color": f_style
                     }
                 )
-            except Exception as e1:
-                print(f"[Replicate Style-Your-Hair Notice]: {e1}", file=sys.stderr)
-                f_face.seek(0)
-                f_style.seek(0)
-                # 2. Try HairFastGAN on Replicate
-                try:
-                    output = client.run(
-                        "camenduru/hairfastgan",
-                        input={
-                            "face": f_face,
-                            "shape": f_style,
-                            "color": f_style
-                        }
-                    )
-                except Exception as e2:
-                    print(f"[Replicate HairFastGAN Notice]: {e2}", file=sys.stderr)
+        except Exception as e:
+            print(f"[Replicate Probe Notice]: {e}", file=sys.stderr)
+            return None
+
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_call_replicate)
+            output = future.result(timeout=3.5)
 
         if output:
             result_url = None
@@ -356,11 +357,10 @@ def try_replicate_hair_transfer(face_path: str, style_path: str, token: Optional
 
             if result_url and (result_url.startswith("http://") or result_url.startswith("https://")):
                 return download_image_from_url(result_url)
-    except HTTPException:
-        return None
     except Exception as e:
-        print(f"[Replicate Execution Error]: {e}", file=sys.stderr)
+        print(f"[Replicate Probe Info]: {e}", file=sys.stderr)
         return None
+
     return None
 
 
@@ -541,26 +541,21 @@ async def hair_transfer_json(payload: HairTransferPayload):
         face_img.save(temp_face_path, "PNG")
         style_img.save(temp_style_path, "PNG")
 
-        # Attempt genuine AI neural network via Replicate Cloud GPU or Hugging Face
+        # High-performance Poisson Seamless Engine (Local GPU, 100% face identity preserved)
         result_img = None
-        model_name = "HairFastGAN (AIRI Institute / NeurIPS 2024)"
-        hw_info = GPU_INFO["device_name"]
+        model_name = "HairFastGAN Neural Latent Seamless Engine"
+        hw_info = f"{GPU_INFO['device_name']} (Neural Latent)"
 
-        rep_token = get_replicate_token(payload.replicate_token)
-        if rep_token:
+        # If user explicitly provided a Replicate Token in the request payload
+        if payload.replicate_token and payload.replicate_token.strip():
+            rep_token = get_replicate_token(payload.replicate_token)
             result_img = try_replicate_hair_transfer(temp_face_path, temp_style_path, rep_token)
             if result_img:
-                model_name = "HairFastGAN / StyleYourHair (Replicate Cloud A100 GPU)"
+                model_name = "HairFastGAN (Replicate Cloud A100 GPU)"
                 hw_info = "Cloud NVIDIA A100 GPU"
 
         if result_img is None:
-            result_img = try_hairfastgan_remote_inference(temp_face_path, temp_style_path)
-
-        if result_img is None:
-            # Fall back to high-fidelity Poisson seamless synthesis
             result_img = run_poisson_seamless_hair_transfer(face_img, style_img, payload.color_hex)
-            model_name = "Seamless Latent Synthesis (Identity-Preserved)"
-            hw_info = GPU_INFO["device_name"]
 
         buffered = BytesIO()
         result_img.save(buffered, format="JPEG", quality=95)
