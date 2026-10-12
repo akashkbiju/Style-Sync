@@ -4,7 +4,7 @@ import {
   Briefcase, Plus, Star, UserCheck, X, Clock, CheckCircle, XCircle, Eye,
   AlertCircle, Shield, Award, Mail, Trash2, ChevronUp, ChevronDown,
   MessageCircle, Send, ArrowUpCircle, ArrowDownCircle, Activity,
-  Calendar, TrendingUp, UserMinus
+  Calendar, TrendingUp, UserMinus, DollarSign, Save
 } from 'lucide-react';
 import { 
   sendApprovalEmail, 
@@ -26,13 +26,17 @@ export const ManageStaff = () => {
     staff, addStaffMember, removeStaffMember, updateStaffLevel,
     pendingStaff, approvePendingStaff, rejectPendingStaff,
     bookings, feedback, staffMessages, sendStaffMessage, markStaffMessagesRead,
-    staffAttendance, leaveRequests, updateLeaveRequestStatus, currentUser
+    staffAttendance, leaveRequests, updateLeaveRequestStatus, currentUser,
+    updateStaffSalary
   } = useSalon();
 
   const [staffAdminTab, setStaffAdminTab] = useState('roster'); // 'roster' | 'attendance' | 'leaves'
   const [leaveRemarksMap, setLeaveRemarksMap] = useState({});
   const [leaveFilter, setLeaveFilter] = useState('All');
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  // Salary editing state per staff id: { [staffId]: monthlySalaryString }
+  const [salaryEditMap, setSalaryEditMap] = useState({});
+  const [salarySavedId, setSalarySavedId] = useState(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedPendingId, setExpandedPendingId] = useState(null);
@@ -126,6 +130,15 @@ export const ManageStaff = () => {
 
   const handleLevelChange = async (staffId, newLevel) => {
     await updateStaffLevel(staffId, newLevel);
+  };
+
+  const handleSalarySave = async (staffId) => {
+    const raw = salaryEditMap[staffId];
+    const monthlySalary = parseFloat(raw);
+    if (!raw || isNaN(monthlySalary) || monthlySalary < 0) return;
+    await updateStaffSalary(staffId, monthlySalary);
+    setSalarySavedId(staffId);
+    setTimeout(() => setSalarySavedId(null), 2500);
   };
 
   const formatDate = (isoString) => {
@@ -532,6 +545,88 @@ export const ManageStaff = () => {
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* ── Salary Management Section ── */}
+                  <div style={{
+                    padding: '1rem 1.1rem',
+                    marginBottom: '1rem',
+                    background: 'linear-gradient(135deg, rgba(16,185,129,0.07), rgba(16,185,129,0.02))',
+                    border: '1px solid rgba(16,185,129,0.2)',
+                    borderRadius: 'var(--radius-sm)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <DollarSign size={15} style={{ color: '#34d399' }} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Salary Management</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: '180px' }}>
+                        <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.3rem', fontWeight: 600 }}>Monthly Gross Salary (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={stf.monthlySalary ? String(stf.monthlySalary) : 'e.g. 25000'}
+                          value={salaryEditMap[stf.id] !== undefined ? salaryEditMap[stf.id] : (stf.monthlySalary || '')}
+                          onChange={e => setSalaryEditMap(prev => ({ ...prev, [stf.id]: e.target.value }))}
+                          className="form-input"
+                          style={{ padding: '0.45rem 0.75rem', fontSize: '0.9rem', fontWeight: 700, color: '#34d399' }}
+                        />
+                      </div>
+                      <div style={{ textAlign: 'center', minWidth: '110px' }}>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem', fontWeight: 600 }}>Per-Day Deduction</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f87171' }}>
+                          ₹{stf.monthlySalary ? Math.round(stf.monthlySalary / 26).toLocaleString('en-IN') : '—'}
+                        </div>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>per leave day (÷26)</div>
+                      </div>
+                      <button
+                        onClick={() => handleSalarySave(stf.id)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          background: salarySavedId === stf.id ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)',
+                          border: `1.5px solid ${salarySavedId === stf.id ? 'rgba(16,185,129,0.6)' : 'rgba(16,185,129,0.35)'}`,
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#34d399',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          transition: 'all 0.2s ease',
+                          boxShadow: salarySavedId === stf.id ? '0 0 12px rgba(16,185,129,0.3)' : 'none'
+                        }}
+                      >
+                        {salarySavedId === stf.id ? <><CheckCircle size={14} /> Saved!</> : <><Save size={14} /> Save Salary</>}
+                      </button>
+                    </div>
+                    {stf.monthlySalary > 0 && (() => {
+                      // Count approved leaves for this staff in the current month
+                      const now = new Date();
+                      const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                      const approvedLeaves = (leaveRequests || []).filter(l =>
+                        (l.staffId === stf.id || l.staffName === stf.name) &&
+                        l.status === 'Approved' &&
+                        (l.startDate || '').startsWith(monthStr)
+                      );
+                      const leaveDays = approvedLeaves.reduce((sum, l) => {
+                        if (!l.startDate) return sum;
+                        const start = new Date(l.startDate);
+                        const end = l.endDate ? new Date(l.endDate) : start;
+                        const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+                        return sum + (l.session === 'Morning' || l.session === 'Afternoon' ? 0.5 : days);
+                      }, 0);
+                      const perDay = Math.round(stf.monthlySalary / 26);
+                      const deduction = Math.round(leaveDays * perDay);
+                      const net = stf.monthlySalary - deduction;
+                      return leaveDays > 0 ? (
+                        <div style={{ marginTop: '0.85rem', padding: '0.65rem 0.85rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                          <div><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Leave Days (this month)</div><div style={{ fontSize: '1rem', fontWeight: 800, color: '#fbbf24' }}>{leaveDays}d</div></div>
+                          <div><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Total Deduction</div><div style={{ fontSize: '1rem', fontWeight: 800, color: '#f87171' }}>−₹{deduction.toLocaleString('en-IN')}</div></div>
+                          <div><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Net Payable</div><div style={{ fontSize: '1rem', fontWeight: 800, color: '#34d399' }}>₹{net.toLocaleString('en-IN')}</div></div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
                   {/* Action Buttons */}
