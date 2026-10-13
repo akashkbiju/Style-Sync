@@ -77,9 +77,6 @@ export const SalonProvider = ({ children }) => {
     return INITIAL_SERVICES;
   });
 
-  // Legacy fake staff filter to ensure only authentic salon staff exist
-  const LEGACY_FAKE_NAMES = new Set(['Alexander Wright', 'Sophia Chen', 'Marcus Vance', 'Elena Rostova']);
-
   const [staff, setStaff] = useState(() => {
     return safeJsonParse('stylesync_staff', INITIAL_STAFF);
   });
@@ -94,13 +91,10 @@ export const SalonProvider = ({ children }) => {
     return safeJsonParse('stylesync_staff_messages', {});
   });
 
-  const [isLoadingStaff, setIsLoadingStaff] = useState(true);
-
   // Fetch real data from Firestore on mount
   useEffect(() => {
     const loadAllCollections = async () => {
       try {
-        setIsLoadingStaff(true);
         
         // 1. Staff
         const dbStaff = await fetchCollection('staff');
@@ -178,8 +172,6 @@ export const SalonProvider = ({ children }) => {
 
       } catch (error) {
         console.error("Failed to load collections from Firestore:", error);
-      } finally {
-        setIsLoadingStaff(false);
       }
     };
     
@@ -589,6 +581,46 @@ export const SalonProvider = ({ children }) => {
     }
   };
 
+  // Update staff monthly salary (used by Admin → Salary Management section)
+  const updateStaffSalary = async (staffId, monthlySalary) => {
+    try {
+      // Persist to Firestore
+      await updateStaffInDB(staffId, { monthlySalary });
+      // Update in-memory state
+      setStaff(prev =>
+        prev.map(s => s.id === staffId ? { ...s, monthlySalary } : s)
+      );
+    } catch(err) {
+      console.error('Failed to update staff salary in DB', err);
+      // Still update local state so UI feels instant
+      setStaff(prev =>
+        prev.map(s => s.id === staffId ? { ...s, monthlySalary } : s)
+      );
+    }
+  };
+
+  // Calculate salary breakdown for a staff member for a given month (YYYY-MM)
+  const calcSalaryBreakdown = (staffMember, monthStr, leaves) => {
+    const monthly = staffMember?.monthlySalary || 0;
+    if (!monthly) return { monthly: 0, leaveDays: 0, deduction: 0, net: 0, perDay: 0 };
+    const perDay = Math.round(monthly / 26);
+    const relevantLeaves = (leaves || []).filter(l =>
+      (l.staffId === staffMember?.id || l.staffName === staffMember?.name) &&
+      l.status === 'Approved' &&
+      (l.startDate || '').startsWith(monthStr)
+    );
+    const leaveDays = relevantLeaves.reduce((sum, l) => {
+      if (!l.startDate) return sum;
+      const start = new Date(l.startDate);
+      const end = l.endDate ? new Date(l.endDate) : start;
+      const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+      return sum + (l.session === 'Morning' || l.session === 'Afternoon' ? 0.5 : days);
+    }, 0);
+    const deduction = Math.round(leaveDays * perDay);
+    const net = Math.max(0, monthly - deduction);
+    return { monthly, leaveDays, deduction, net, perDay };
+  };
+
   // Send a message between admin and staff
   const sendStaffMessage = (staffId, message, senderRole) => {
     const msg = {
@@ -867,6 +899,8 @@ export const SalonProvider = ({ children }) => {
       rejectPendingStaff,
       updateStaffStatus,
       updateStaffLevel,
+      updateStaffSalary,
+      calcSalaryBreakdown,
       updateStaffProfile,
       updateUserProfile,
       addFeedback,
