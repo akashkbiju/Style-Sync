@@ -12,11 +12,15 @@ import {
   Filter,
   User,
   ShieldCheck,
-  Check
+  Check,
+  DollarSign,
+  TrendingDown,
+  BadgeIndianRupee,
+  Wallet
 } from 'lucide-react';
 
 export const StaffLeaveRequest = ({ staffProfile }) => {
-  const { leaveRequests, submitLeaveRequest } = useSalon();
+  const { leaveRequests, submitLeaveRequest, calcSalaryBreakdown, staff } = useSalon();
 
   // Tomorrow as default start date
   const tomorrowStr = (() => {
@@ -40,6 +44,12 @@ export const StaffLeaveRequest = ({ staffProfile }) => {
   const staffId = staffProfile?.id || staffProfile?.uid || 'staff';
   const staffName = staffProfile?.name || 'Staff Member';
   const staffRole = staffProfile?.role || 'Senior Stylist';
+
+  // Salary breakdown calculation
+  const staffRecord = staff?.find(s => s.id === staffId || s.name === staffName) || staffProfile;
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const salaryInfo = calcSalaryBreakdown ? calcSalaryBreakdown(staffRecord, currentMonthStr, leaveRequests) : null;
 
   // Filter requests belonging to this staff member
   const myLeaves = (leaveRequests || []).filter(
@@ -303,6 +313,89 @@ export const StaffLeaveRequest = ({ staffProfile }) => {
 
         {/* My Leave Requests Table */}
         <div className="glass-panel" style={{ padding: '2rem' }}>
+
+          {/* ── Salary Breakdown Banner ── */}
+          {salaryInfo && salaryInfo.monthly > 0 ? (
+            <div style={{
+              marginBottom: '2rem',
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02), rgba(239,68,68,0.05))',
+              border: '1px solid rgba(16,185,129,0.25)',
+              borderRadius: 'var(--radius-md)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Decorative glow */}
+              <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(16,185,129,0.06)', pointerEvents: 'none' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                <Wallet size={18} style={{ color: '#34d399' }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em' }}>My Salary Breakdown — {now.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+              </div>
+
+              {/* Three Metric Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: salaryInfo.leaveDays > 0 ? '1.25rem' : '0' }}>
+                {/* Gross */}
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.4rem' }}>Gross Salary</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#34d399', fontFamily: 'var(--font-serif)' }}>₹{salaryInfo.monthly.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Monthly Fixed</div>
+                </div>
+
+                {/* Deduction */}
+                <div style={{ padding: '1rem', background: 'rgba(239,68,68,0.04)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.4rem' }}>Leave Deduction</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: salaryInfo.deduction > 0 ? '#f87171' : 'var(--text-muted)', fontFamily: 'var(--font-serif)' }}>−₹{salaryInfo.deduction.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{salaryInfo.leaveDays}d × ₹{salaryInfo.perDay.toLocaleString('en-IN')}/day</div>
+                </div>
+
+                {/* Net */}
+                <div style={{ padding: '1rem', background: 'rgba(245,158,11,0.04)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245,158,11,0.25)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.4rem' }}>Net Payable</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24', fontFamily: 'var(--font-serif)' }}>₹{salaryInfo.net.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>After leave cuts</div>
+                </div>
+              </div>
+
+              {/* Per-leave itemized breakdown */}
+              {salaryInfo.leaveDays > 0 && (() => {
+                const approvedThisMonth = myLeaves.filter(l =>
+                  l.status === 'Approved' && (l.startDate || '').startsWith(currentMonthStr)
+                );
+                return (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.6rem' }}>Approved Leave Deductions This Month</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      {approvedThisMonth.map(l => {
+                        const start = new Date(l.startDate);
+                        const end = l.endDate ? new Date(l.endDate) : start;
+                        const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
+                        const effectiveDays = (l.session === 'Morning' || l.session === 'Afternoon') ? 0.5 : days;
+                        const cut = Math.round(effectiveDays * salaryInfo.perDay);
+                        return (
+                          <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: 'rgba(239,68,68,0.05)', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.12)', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600 }}>{l.leaveType}</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{l.startDate}{l.endDate && l.endDate !== l.startDate ? ` → ${l.endDate}` : ''} • {l.session}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#fbbf24' }}>{effectiveDays}d</span>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f87171' }}>−₹{cut.toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : salaryInfo && salaryInfo.monthly === 0 ? (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <DollarSign size={16} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Salary not configured yet — contact the Salon Administrator to set up your monthly salary.</span>
+            </div>
+          ) : null}
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
