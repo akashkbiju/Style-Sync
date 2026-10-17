@@ -77,8 +77,28 @@ export const SalonProvider = ({ children }) => {
     return INITIAL_SERVICES;
   });
 
+  const DEFAULT_SALARY_SETTINGS = {
+    workingDaysPerMonth: 26,
+    halfDayDeductionRate: 0.5,
+    currencySymbol: '₹',
+    autoDeductLeaves: true,
+    payCycleDay: 1,
+    minimumWageThreshold: 10000,
+    overtimeBonusRate: 150,
+  };
+
   const [staff, setStaff] = useState(() => {
     return safeJsonParse('stylesync_staff', INITIAL_STAFF);
+  });
+
+  // Salon-wide Salary Settings & Configuration
+  const [salarySettings, setSalarySettings] = useState(() => {
+    return safeJsonParse('stylesync_salary_settings', DEFAULT_SALARY_SETTINGS);
+  });
+
+  // Salary Disbursements / Payout Records History
+  const [salaryDisbursements, setSalaryDisbursements] = useState(() => {
+    return safeJsonParse('stylesync_salary_disbursements', []);
   });
 
   // Pending staff requests (awaiting admin approval)
@@ -170,6 +190,18 @@ export const SalonProvider = ({ children }) => {
           if (dbLeaves.length > 0) setLeaveRequests(dbLeaves);
         }
 
+        // 10. Salon Salary Settings
+        const dbSalarySettings = await fetchCollection('salarySettings');
+        if (dbSalarySettings !== null && dbSalarySettings.length > 0) {
+          setSalarySettings(prev => ({ ...prev, ...dbSalarySettings[0] }));
+        }
+
+        // 11. Salary Disbursements History
+        const dbDisbursements = await fetchCollection('salaryDisbursements');
+        if (dbDisbursements !== null && dbDisbursements.length > 0) {
+          setSalaryDisbursements(dbDisbursements);
+        }
+
       } catch (error) {
         console.error("Failed to load collections from Firestore:", error);
       }
@@ -245,6 +277,14 @@ export const SalonProvider = ({ children }) => {
   useEffect(() => {
     try { localStorage.setItem('stylesync_leave_requests', JSON.stringify(leaveRequests)); } catch(e) {}
   }, [leaveRequests]);
+
+  useEffect(() => {
+    try { localStorage.setItem('stylesync_salary_settings', JSON.stringify(salarySettings)); } catch(e) {}
+  }, [salarySettings]);
+
+  useEffect(() => {
+    try { localStorage.setItem('stylesync_salary_disbursements', JSON.stringify(salaryDisbursements)); } catch(e) {}
+  }, [salaryDisbursements]);
 
   const [complaints, setComplaints] = useState(() => {
     return safeJsonParse('stylesync_complaints', INITIAL_COMPLAINTS);
@@ -599,11 +639,46 @@ export const SalonProvider = ({ children }) => {
     }
   };
 
+  // Update global salon salary settings (working days, deduction rules, etc.)
+  const updateSalarySettings = async (newSettings) => {
+    const updated = { ...salarySettings, ...newSettings };
+    setSalarySettings(updated);
+    try {
+      await addDocument('salarySettings', { ...updated, id: 'global_config', updatedAt: new Date().toISOString() });
+    } catch (err) {
+      console.warn('Could not persist salary settings to Firestore', err);
+    }
+  };
+
+  // Record a salary payout / disbursement to staff
+  const recordSalaryPayout = async (payoutData) => {
+    const newPayout = {
+      id: `payout-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      createdAt: new Date().toISOString(),
+      status: 'Paid',
+      ...payoutData
+    };
+    setSalaryDisbursements(prev => [
+      newPayout,
+      ...prev.filter(p => !(p.staffId === payoutData.staffId && p.monthStr === payoutData.monthStr))
+    ]);
+    try {
+      await addDocument('salaryDisbursements', newPayout);
+    } catch (err) {
+      console.warn('Could not persist salary payout to Firestore', err);
+    }
+    return newPayout;
+  };
+
   // Calculate salary breakdown for a staff member for a given month (YYYY-MM)
-  const calcSalaryBreakdown = (staffMember, monthStr, leaves) => {
-    const monthly = staffMember?.monthlySalary || 0;
-    if (!monthly) return { monthly: 0, leaveDays: 0, deduction: 0, net: 0, perDay: 0 };
-    const perDay = Math.round(monthly / 26);
+  const calcSalaryBreakdown = (staffMember, monthStr, leaves, customSettings = null) => {
+    const settings = customSettings || salarySettings || DEFAULT_SALARY_SETTINGS;
+    const workingDays = settings.workingDaysPerMonth || 26;
+    const halfDayRatio = settings.halfDayDeductionRate !== undefined ? Number(settings.halfDayDeductionRate) : 0.5;
+
+    const monthly = Number(staffMember?.monthlySalary) || 0;
+    if (!monthly) return { monthly: 0, leaveDays: 0, deduction: 0, net: 0, perDay: 0, workingDays, relevantLeaves: [] };
+    const perDay = Math.round(monthly / workingDays);
     const relevantLeaves = (leaves || []).filter(l =>
       (l.staffId === staffMember?.id || l.staffName === staffMember?.name) &&
       l.status === 'Approved' &&
@@ -614,11 +689,11 @@ export const SalonProvider = ({ children }) => {
       const start = new Date(l.startDate);
       const end = l.endDate ? new Date(l.endDate) : start;
       const days = Math.max(1, Math.round((end - start) / 86400000) + 1);
-      return sum + (l.session === 'Morning' || l.session === 'Afternoon' ? 0.5 : days);
+      return sum + (l.session === 'Morning' || l.session === 'Afternoon' ? halfDayRatio : days);
     }, 0);
-    const deduction = Math.round(leaveDays * perDay);
+    const deduction = settings.autoDeductLeaves !== false ? Math.round(leaveDays * perDay) : 0;
     const net = Math.max(0, monthly - deduction);
-    return { monthly, leaveDays, deduction, net, perDay };
+    return { monthly, leaveDays, deduction, net, perDay, workingDays, relevantLeaves };
   };
 
   // Send a message between admin and staff
@@ -901,6 +976,10 @@ export const SalonProvider = ({ children }) => {
       updateStaffLevel,
       updateStaffSalary,
       calcSalaryBreakdown,
+      salarySettings,
+      updateSalarySettings,
+      salaryDisbursements,
+      recordSalaryPayout,
       updateStaffProfile,
       updateUserProfile,
       addFeedback,
