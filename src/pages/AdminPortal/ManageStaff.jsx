@@ -4,7 +4,8 @@ import {
   Briefcase, Plus, Star, UserCheck, X, Clock, CheckCircle, XCircle, Eye,
   AlertCircle, Shield, Award, Mail, Trash2, ChevronUp, ChevronDown,
   MessageCircle, Send, ArrowUpCircle, ArrowDownCircle, Activity,
-  Calendar, TrendingUp, UserMinus, DollarSign, Save
+  Calendar, TrendingUp, UserMinus, DollarSign, Save, Sliders, Settings,
+  FileText, Check, Download, CreditCard, Wallet, Search, Filter, RefreshCw
 } from 'lucide-react';
 import { 
   sendApprovalEmail, 
@@ -21,22 +22,32 @@ const levelColors = {
   'Lead':      { bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.35)', text: '#c084fc' },
 };
 
-export const ManageStaff = () => {
+export const ManageStaff = ({ initialTab = 'roster' }) => {
   const {
     staff, addStaffMember, removeStaffMember, updateStaffLevel,
     pendingStaff, approvePendingStaff, rejectPendingStaff,
     bookings, feedback, staffMessages, sendStaffMessage, markStaffMessagesRead,
     staffAttendance, leaveRequests, updateLeaveRequestStatus, currentUser,
-    updateStaffSalary
+    updateStaffSalary, calcSalaryBreakdown, salarySettings, updateSalarySettings,
+    salaryDisbursements, recordSalaryPayout
   } = useSalon();
 
-  const [staffAdminTab, setStaffAdminTab] = useState('roster'); // 'roster' | 'attendance' | 'leaves'
+  const [staffAdminTab, setStaffAdminTab] = useState(initialTab); // 'roster' | 'attendance' | 'leaves' | 'salary'
   const [leaveRemarksMap, setLeaveRemarksMap] = useState({});
   const [leaveFilter, setLeaveFilter] = useState('All');
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
   // Salary editing state per staff id: { [staffId]: monthlySalaryString }
   const [salaryEditMap, setSalaryEditMap] = useState({});
   const [salarySavedId, setSalarySavedId] = useState(null);
+
+  // Salary & Payroll Tab State
+  const [selectedSalaryMonth, setSelectedSalaryMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [salarySearchTerm, setSalarySearchTerm] = useState('');
+  const [salaryFilterLevel, setSalaryFilterLevel] = useState('All');
+  const [activeEditingSalaryId, setActiveEditingSalaryId] = useState(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedPendingId, setExpandedPendingId] = useState(null);
@@ -310,6 +321,28 @@ export const ManageStaff = () => {
               {pendingLeavesCount} Pending
             </span>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStaffAdminTab('salary')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            borderRadius: 'var(--radius-sm)',
+            border: staffAdminTab === 'salary' ? '1.5px solid #10b981' : '1px solid rgba(16, 185, 129, 0.35)',
+            background: staffAdminTab === 'salary' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.03)',
+            color: staffAdminTab === 'salary' ? '#34d399' : 'var(--text-secondary)',
+            boxShadow: staffAdminTab === 'salary' ? '0 0 15px rgba(16, 185, 129, 0.3)' : 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <DollarSign size={16} /> Salary &amp; Payroll ({staff.filter(s => s.monthlySalary > 0).length}/{staff.length} Active)
         </button>
       </div>
 
@@ -1014,6 +1047,403 @@ export const ManageStaff = () => {
       </div>
     );
   })()}
+
+      {/* ═════════════════════════════════════════════════════════════════
+          TAB 4: SALARY & PAYROLL MANAGEMENT
+          ═════════════════════════════════════════════════════════════════ */}
+      {staffAdminTab === 'salary' && (() => {
+        const workingDays = salarySettings?.workingDaysPerMonth || 26;
+
+        // Filter staff based on search and level
+        const filteredStaff = staff.filter(s => {
+          const matchesSearch = (s.name || '').toLowerCase().includes(salarySearchTerm.toLowerCase()) ||
+                                (s.specialty || '').toLowerCase().includes(salarySearchTerm.toLowerCase()) ||
+                                (s.role || '').toLowerCase().includes(salarySearchTerm.toLowerCase());
+          const matchesLevel = salaryFilterLevel === 'All' || (s.level || 'Junior') === salaryFilterLevel;
+          return matchesSearch && matchesLevel;
+        });
+
+        // Totals for selected month
+        let totalGross = 0;
+        let totalDeductions = 0;
+        let totalNet = 0;
+        let configuredCount = 0;
+
+        staff.forEach(s => {
+          const b = calcSalaryBreakdown(s, selectedSalaryMonth, leaveRequests);
+          totalGross += b.monthly;
+          totalDeductions += b.deduction;
+          totalNet += b.net;
+          if (b.monthly > 0) configuredCount++;
+        });
+
+        return (
+          <div>
+            {/* Header / Subtitle */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 className="font-serif gold-text" style={{ fontSize: '1.6rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <DollarSign size={24} style={{ color: '#34d399' }} /> Salon Payroll &amp; Staff Compensation
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                  Manage base monthly salaries, real-time leave deduction calculations, and compensation records for <strong>{selectedSalaryMonth}</strong>.
+                </p>
+              </div>
+
+              {/* Month Selector & Working Days Indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.04)', padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Calendar size={15} style={{ color: 'var(--accent-gold)' }} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>PAYROLL MONTH:</span>
+                  <input
+                    type="month"
+                    value={selectedSalaryMonth}
+                    onChange={e => setSelectedSalaryMonth(e.target.value)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  padding: '0.4rem 0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  fontSize: '0.75rem',
+                  color: '#34d399',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}>
+                  <Clock size={14} /> Standard Basis: <strong>{workingDays} Working Days/Mo</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Top 4 KPI Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {/* Gross Payroll */}
+              <div className="neon-card" style={{ padding: '1.25rem', background: 'rgba(16, 16, 24, 0.85)', borderLeft: '4px solid #60a5fa' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Total Gross Payroll
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#60a5fa' }}>
+                  ₹{totalGross.toLocaleString('en-IN')}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                  Base contract value for {staff.length} staff
+                </div>
+              </div>
+
+              {/* Total Deductions */}
+              <div className="neon-card" style={{ padding: '1.25rem', background: 'rgba(16, 16, 24, 0.85)', borderLeft: '4px solid #f87171' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Leave Deductions ({selectedSalaryMonth})
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f87171' }}>
+                  −₹{totalDeductions.toLocaleString('en-IN')}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                  Deducted for approved absences &amp; leaves
+                </div>
+              </div>
+
+              {/* Net Disbursable */}
+              <div className="neon-card" style={{ padding: '1.25rem', background: 'rgba(16, 16, 24, 0.85)', borderLeft: '4px solid #34d399' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Net Payroll Payable
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#34d399' }}>
+                  ₹{totalNet.toLocaleString('en-IN')}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                  Estimated total net salon outlay
+                </div>
+              </div>
+
+              {/* Salary Setup Progress */}
+              <div className="neon-card" style={{ padding: '1.25rem', background: 'rgba(16, 16, 24, 0.85)', borderLeft: '4px solid var(--accent-gold)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Staff Salary Setup
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                  {configuredCount} / {staff.length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                  {configuredCount === staff.length ? '100% staff salaries assigned' : `${staff.length - configuredCount} pending salary definition`}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flex: 1, minWidth: '240px' }}>
+                <Search size={16} style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search staff by name, role, or specialty..."
+                  value={salarySearchTerm}
+                  onChange={e => setSalarySearchTerm(e.target.value)}
+                  className="form-input"
+                  style={{ width: '100%', maxWidth: '360px', padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Filter Level:</span>
+                {['All', ...STAFF_LEVELS].map(lvl => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setSalaryFilterLevel(lvl)}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: salaryFilterLevel === lvl ? '1px solid var(--accent-gold)' : '1px solid rgba(255,255,255,0.1)',
+                      background: salaryFilterLevel === lvl ? 'rgba(217, 119, 6, 0.2)' : 'rgba(255,255,255,0.03)',
+                      color: salaryFilterLevel === lvl ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Staff Salary Table */}
+            <div className="neon-card" style={{ padding: '0', overflowX: 'auto', background: 'rgba(16, 16, 24, 0.95)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '820px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}>
+                    <th style={{ padding: '1rem 1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Staff Specialist</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Level</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, minWidth: '190px' }}>Monthly Gross (₹)</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Daily Rate</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Leaves Used</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Deduction</th>
+                    <th style={{ padding: '1rem 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Net Payable</th>
+                    <th style={{ padding: '1rem 1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        No staff members found matching your search criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStaff.map(stf => {
+                      const breakdown = calcSalaryBreakdown(stf, selectedSalaryMonth, leaveRequests);
+                      const currentVal = salaryEditMap[stf.id] !== undefined ? salaryEditMap[stf.id] : (stf.monthlySalary || '');
+                      const lvl = stf.level || 'Junior';
+                      const color = levelColors[lvl] || levelColors['Junior'];
+                      const isSaved = salarySavedId === stf.id;
+
+                      // Check if already marked as paid
+                      const disbursement = (salaryDisbursements || []).find(d => d.staffId === stf.id && d.monthStr === selectedSalaryMonth);
+
+                      return (
+                        <tr key={stf.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s ease' }}>
+                          {/* Staff Info */}
+                          <td style={{ padding: '1rem 1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <img
+                                src={stf.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
+                                alt={stf.name}
+                                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-red)' }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.92rem' }}>{stf.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{stf.role} • {stf.specialty}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Level */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            <span style={{
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '4px',
+                              background: color.bg,
+                              border: `1px solid ${color.border}`,
+                              color: color.text,
+                              fontSize: '0.72rem',
+                              fontWeight: 700
+                            }}>
+                              {lvl}
+                            </span>
+                          </td>
+
+                          {/* Monthly Gross Salary (Inline Editable) */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="e.g. 25000"
+                                value={currentVal}
+                                onChange={e => setSalaryEditMap(prev => ({ ...prev, [stf.id]: e.target.value }))}
+                                className="form-input"
+                                style={{
+                                  padding: '0.35rem 0.6rem',
+                                  fontSize: '0.88rem',
+                                  fontWeight: 700,
+                                  color: '#34d399',
+                                  width: '120px'
+                                }}
+                              />
+                              <button
+                                onClick={() => handleSalarySave(stf.id)}
+                                title="Save Salary to Database"
+                                style={{
+                                  padding: '0.38rem 0.65rem',
+                                  background: isSaved ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)',
+                                  border: `1px solid ${isSaved ? '#34d399' : 'rgba(255,255,255,0.15)'}`,
+                                  borderRadius: 'var(--radius-sm)',
+                                  color: isSaved ? '#34d399' : 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  transition: 'all 0.2s ease'
+                                }}
+                              >
+                                {isSaved ? <Check size={13} /> : <Save size={13} />}
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Daily Rate */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>
+                              {breakdown.perDay ? `₹${breakdown.perDay.toLocaleString('en-IN')}` : '—'}
+                            </div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>÷{workingDays} days</div>
+                          </td>
+
+                          {/* Leaves Used */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            {breakdown.leaveDays > 0 ? (
+                              <span style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '4px',
+                                background: 'rgba(245, 158, 11, 0.12)',
+                                border: '1px solid rgba(245, 158, 11, 0.35)',
+                                color: '#fbbf24',
+                                fontSize: '0.75rem',
+                                fontWeight: 700
+                              }}>
+                                {breakdown.leaveDays} {breakdown.leaveDays === 1 ? 'day' : 'days'}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>0 days</span>
+                            )}
+                          </td>
+
+                          {/* Deduction */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            {breakdown.deduction > 0 ? (
+                              <span style={{ fontWeight: 700, color: '#f87171', fontSize: '0.88rem' }}>
+                                −₹{breakdown.deduction.toLocaleString('en-IN')}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>₹0</span>
+                            )}
+                          </td>
+
+                          {/* Net Payable */}
+                          <td style={{ padding: '1rem 1rem' }}>
+                            <div style={{
+                              fontWeight: 800,
+                              color: breakdown.net > 0 ? '#34d399' : 'var(--text-muted)',
+                              fontSize: '1rem'
+                            }}>
+                              ₹{breakdown.net.toLocaleString('en-IN')}
+                            </div>
+                          </td>
+
+                          {/* Actions / Status */}
+                          <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                            {disbursement ? (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.3rem 0.65rem',
+                                borderRadius: '4px',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.35)',
+                                color: '#34d399',
+                                fontSize: '0.72rem',
+                                fontWeight: 700
+                              }}>
+                                <Check size={12} /> Disbursed
+                              </span>
+                            ) : (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.3rem 0.65rem',
+                                borderRadius: '4px',
+                                background: 'rgba(245, 158, 11, 0.12)',
+                                border: '1px solid rgba(245, 158, 11, 0.35)',
+                                color: '#fbbf24',
+                                fontSize: '0.72rem',
+                                fontWeight: 700
+                              }}>
+                                Ready for Payout
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Salary Calculation Policy Note Footer */}
+            <div style={{
+              marginTop: '1.25rem',
+              padding: '0.85rem 1.15rem',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.78rem',
+              color: 'var(--text-muted)',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
+            }}>
+              <div>
+                💡 <strong>Salary Policy:</strong> Daily wage rate is calculated as <code style={{ color: '#60a5fa' }}>Monthly Gross ÷ {workingDays} working days</code>. Half-day leaves (Morning/Afternoon) are calculated at 0.5 days.
+              </div>
+              <div>
+                Total Monthly Payroll: <strong style={{ color: '#34d399' }}>₹{totalNet.toLocaleString('en-IN')}</strong>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
   {/* ═════════════════════════════════════════════════════════════════
 
