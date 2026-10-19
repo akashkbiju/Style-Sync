@@ -49,6 +49,11 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
   const [salaryFilterLevel, setSalaryFilterLevel] = useState('All');
   const [activeEditingSalaryId, setActiveEditingSalaryId] = useState(null);
 
+  // Global Salary Settings Modal State
+  const [showSalarySettingsModal, setShowSalarySettingsModal] = useState(false);
+  const [tempSalarySettings, setTempSalarySettings] = useState(null);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedPendingId, setExpandedPendingId] = useState(null);
   const [confirmRejectId, setConfirmRejectId] = useState(null);
@@ -150,6 +155,35 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
     await updateStaffSalary(staffId, monthlySalary);
     setSalarySavedId(staffId);
     setTimeout(() => setSalarySavedId(null), 2500);
+  };
+
+  const handleOpenSalarySettings = () => {
+    setTempSalarySettings({
+      workingDaysPerMonth: salarySettings?.workingDaysPerMonth || 26,
+      halfDayDeductionRate: salarySettings?.halfDayDeductionRate !== undefined ? salarySettings.halfDayDeductionRate : 0.5,
+      autoDeductLeaves: salarySettings?.autoDeductLeaves !== false,
+      payCycleDay: salarySettings?.payCycleDay || 1,
+      minimumWageThreshold: salarySettings?.minimumWageThreshold || 10000,
+      currencySymbol: salarySettings?.currencySymbol || '₹',
+    });
+    setShowSalarySettingsModal(true);
+  };
+
+  const handleSaveSalarySettings = async (e) => {
+    e.preventDefault();
+    if (!tempSalarySettings) return;
+    await updateSalarySettings({
+      ...tempSalarySettings,
+      workingDaysPerMonth: Math.max(15, Math.min(31, parseInt(tempSalarySettings.workingDaysPerMonth) || 26)),
+      halfDayDeductionRate: parseFloat(tempSalarySettings.halfDayDeductionRate) || 0.5,
+      minimumWageThreshold: Math.max(0, parseInt(tempSalarySettings.minimumWageThreshold) || 10000),
+      payCycleDay: Math.max(1, Math.min(31, parseInt(tempSalarySettings.payCycleDay) || 1))
+    });
+    setSettingsSaveSuccess(true);
+    setTimeout(() => {
+      setSettingsSaveSuccess(false);
+      setShowSalarySettingsModal(false);
+    }, 1200);
   };
 
   const formatDate = (isoString) => {
@@ -1125,6 +1159,22 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
                 }}>
                   <Clock size={14} /> Standard Basis: <strong>{workingDays} Working Days/Mo</strong>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenSalarySettings}
+                  className="btn-gold"
+                  style={{
+                    padding: '0.45rem 0.95rem',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Settings size={14} /> Policy &amp; Rules
+                </button>
               </div>
             </div>
 
@@ -1550,6 +1600,160 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
               <div className="form-group"><label className="form-label">Specialty</label><input type="text" className="form-input" value={specialty} onChange={e => setSpecialty(e.target.value)} /></div>
               <div className="form-group"><label className="form-label">Experience</label><input type="text" className="form-input" value={experience} onChange={e => setExperience(e.target.value)} /></div>
               <button type="submit" className="btn-gold" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}>Save Staff Profile</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════
+          SALARY SETTINGS & DEDUCTION RULES MODAL
+          ═════════════════════════════════════════════════════════════════ */}
+      {showSalarySettingsModal && tempSalarySettings && (
+        <div className="modal-overlay" onClick={() => setShowSalarySettingsModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', background: 'rgba(12, 12, 18, 0.98)', border: '1.5px solid var(--accent-gold)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sliders size={20} style={{ color: 'var(--accent-gold)' }} />
+                <h3 className="font-serif gold-text" style={{ fontSize: '1.35rem', margin: 0 }}>Salon Salary &amp; Deduction Policy</h3>
+              </div>
+              <button onClick={() => setShowSalarySettingsModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSalarySettings}>
+              {/* Setting 1: Working Days Per Month */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>Standard Working Days Per Month</label>
+                  <span style={{ fontSize: '0.9rem', color: '#34d399', fontWeight: 800 }}>{tempSalarySettings.workingDaysPerMonth} Days</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="30"
+                  step="1"
+                  value={tempSalarySettings.workingDaysPerMonth}
+                  onChange={e => setTempSalarySettings(p => ({ ...p, workingDaysPerMonth: parseInt(e.target.value) }))}
+                  style={{ width: '100%', accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  <span>20 Days (4-day week)</span>
+                  <span style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>26 Days (Salon Default)</span>
+                  <span>30 Days (Full calendar)</span>
+                </div>
+                <p style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0' }}>
+                  Determines daily wage rate (<code style={{ color: '#60a5fa' }}>Monthly ÷ {tempSalarySettings.workingDaysPerMonth}</code>) deducted per approved unpaid leave day.
+                </p>
+              </div>
+
+              {/* Setting 2: Half-Day Deduction Rate */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Half-Day Leave Deduction Ratio</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTempSalarySettings(p => ({ ...p, halfDayDeductionRate: 0.5 }))}
+                    style={{
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: tempSalarySettings.halfDayDeductionRate === 0.5 ? '1.5px solid var(--accent-gold)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tempSalarySettings.halfDayDeductionRate === 0.5 ? 'rgba(217, 119, 6, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: tempSalarySettings.halfDayDeductionRate === 0.5 ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      textAlign: 'center'
+                    }}
+                  >
+                    50% Deduction (0.5 Days)
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Standard salon practice</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTempSalarySettings(p => ({ ...p, halfDayDeductionRate: 0.33 }))}
+                    style={{
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: tempSalarySettings.halfDayDeductionRate === 0.33 ? '1.5px solid var(--accent-gold)' : '1px solid rgba(255,255,255,0.1)',
+                      background: tempSalarySettings.halfDayDeductionRate === 0.33 ? 'rgba(217, 119, 6, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: tempSalarySettings.halfDayDeductionRate === 0.33 ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      textAlign: 'center'
+                    }}
+                  >
+                    33% Deduction (0.33 Days)
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Lenient half-day allowance</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Setting 3: Auto-Deduct Toggle */}
+              <div style={{
+                padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1.25rem'
+              }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>Auto-Deduct Approved Leaves</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Automatically reduce net payable salary when leaves are approved</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={tempSalarySettings.autoDeductLeaves}
+                  onChange={e => setTempSalarySettings(p => ({ ...p, autoDeductLeaves: e.target.checked }))}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#10b981' }}
+                />
+              </div>
+
+              {/* Setting 4: Pay Cycle Cutoff Date */}
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label">Monthly Pay Cycle Disbursal Day</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={tempSalarySettings.payCycleDay}
+                    onChange={e => setTempSalarySettings(p => ({ ...p, payCycleDay: parseInt(e.target.value) || 1 }))}
+                    className="form-input"
+                    style={{ width: '100px', fontWeight: 700 }}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    of every calendar month (default: 1st)
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSalarySettingsModal(false)}
+                  className="btn-outline"
+                  style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-gold"
+                  style={{ padding: '0.55rem 1.35rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  {settingsSaveSuccess ? (
+                    <><Check size={16} style={{ color: '#34d399' }} /> Policy Saved!</>
+                  ) : (
+                    <><Save size={16} /> Save Salary Policy</>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>
