@@ -3,14 +3,16 @@ import { useSalon } from '../../context/SalonContext';
 import { 
   Home, 
   Users, 
-  User,
+  User, 
   Scissors, 
   BarChart2, 
   HeartHandshake, 
   LogOut,
   TrendingUp,
   CreditCard,
-  MessageSquare
+  MessageSquare,
+  DollarSign,
+  Wallet
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -63,6 +65,8 @@ export const AdminDashboard = () => {
   // Calculate live statistics
   const totalRevenue = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const activeStaffCount = staff.filter(s => s.status === 'Available').length;
+  const totalPayroll = staff.reduce((sum, s) => sum + (Number(s.monthlySalary) || 0), 0);
+  const configuredStaffCount = staff.filter(s => Number(s.monthlySalary) > 0).length;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2rem', minHeight: '82vh', padding: '1rem 0' }}>
@@ -141,6 +145,48 @@ export const AdminDashboard = () => {
               animation: 'pulse 2s ease-in-out infinite'
             }}>
               {pendingStaff.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => { setActiveSideNav('salary'); setAdminTab('salary'); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            border: activeSideNav === 'salary' || adminTab === 'salary' ? '1.5px solid #10b981' : 'none',
+            background: activeSideNav === 'salary' || adminTab === 'salary' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+            color: activeSideNav === 'salary' || adminTab === 'salary' ? '#34d399' : 'var(--text-secondary)',
+            boxShadow: activeSideNav === 'salary' || adminTab === 'salary' ? 'inset 0 0 10px rgba(16, 185, 129, 0.25)' : 'none',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <DollarSign size={18} /> Salaries &amp; Payroll
+          {configuredStaffCount < staff.length && (
+            <span style={{
+              marginLeft: 'auto',
+              minWidth: '20px',
+              height: '20px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              color: '#fbbf24',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 5px'
+            }} title={`${staff.length - configuredStaffCount} staff need salary configuration`}>
+              {configuredStaffCount}/{staff.length}
             </span>
           )}
         </button>
@@ -287,6 +333,8 @@ export const AdminDashboard = () => {
         {/* Dynamic sub pages */}
         {adminTab === 'staff' ? (
           <ManageStaff />
+        ) : adminTab === 'salary' ? (
+          <ManageStaff initialTab="salary" />
         ) : adminTab === 'services' ? (
           <ManageServices />
         ) : adminTab === 'home-requests' ? (
@@ -384,27 +432,27 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Bottom Row: 2 Big Stat Cards (Matching Screenshot 4) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                {/* Bottom Row: 3 Stat Cards including Monthly Staff Payroll */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   
                   {/* Stat Card 1: Active Staff */}
                   <div className="neon-card" style={{
-                    padding: '1.5rem',
+                    padding: '1.25rem',
                     textAlign: 'center',
                     border: '1.5px solid var(--accent-red)',
                     boxShadow: '0 0 20px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.15)'
                   }}>
-                    <h4 className="font-serif" style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.5rem', fontWeight: 500 }}>
+                    <h4 className="font-serif" style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.4rem', fontWeight: 500 }}>
                       Active Staff Roster
                     </h4>
-                    <div style={{ fontSize: '3.2rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.6rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
                       {staff.length}
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
                       Certified Specialists Available
                     </p>
                     {pendingStaff.length > 0 && (
-                      <p style={{ fontSize: '0.75rem', color: '#fbbf24', marginTop: '0.4rem', fontWeight: 600 }}>
+                      <p style={{ fontSize: '0.72rem', color: '#fbbf24', marginTop: '0.3rem', fontWeight: 600 }}>
                         ⏳ {pendingStaff.length} pending approval{pendingStaff.length > 1 ? 's' : ''}
                       </p>
                     )}
@@ -412,20 +460,48 @@ export const AdminDashboard = () => {
 
                   {/* Stat Card 2: Total Bookings */}
                   <div className="neon-card" style={{
-                    padding: '1.5rem',
+                    padding: '1.25rem',
                     textAlign: 'center',
                     border: '1.5px solid var(--accent-red)',
                     boxShadow: '0 0 20px rgba(255, 0, 60, 0.4), inset 0 0 10px rgba(255, 0, 60, 0.15)'
                   }}>
-                    <h4 className="font-serif" style={{ fontSize: '1.3rem', color: '#ffffff', marginBottom: '0.5rem', fontWeight: 500 }}>
+                    <h4 className="font-serif" style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.4rem', fontWeight: 500 }}>
                       Total Bookings
                     </h4>
-                    <div style={{ fontSize: '3.2rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.6rem', fontWeight: 700, color: 'var(--accent-red)', lineHeight: 1 }}>
                       {bookings.length}
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
                       Live Appointments Recorded
                     </p>
+                  </div>
+
+                  {/* Stat Card 3: Monthly Staff Payroll */}
+                  <div 
+                    className="neon-card" 
+                    onClick={() => { setActiveSideNav('salary'); setAdminTab('salary'); }}
+                    style={{
+                      padding: '1.25rem',
+                      textAlign: 'center',
+                      border: '1.5px solid #10b981',
+                      boxShadow: '0 0 20px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                    }}
+                    title="Click to manage staff salaries & payroll"
+                  >
+                    <h4 className="font-serif" style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.4rem', fontWeight: 500 }}>
+                      Monthly Payroll
+                    </h4>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#34d399', lineHeight: 1 }}>
+                      ₹{totalPayroll.toLocaleString('en-IN')}
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
+                      {configuredStaffCount}/{staff.length} Staff Salaries Set
+                    </p>
+                    <div style={{ marginTop: '0.4rem', fontSize: '0.72rem', color: '#34d399', fontWeight: 700, textDecoration: 'underline' }}>
+                      Manage Salaries →
+                    </div>
                   </div>
 
                 </div>
