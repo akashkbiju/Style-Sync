@@ -54,6 +54,14 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
   const [tempSalarySettings, setTempSalarySettings] = useState(null);
   const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
 
+  // Payslip & Disbursal Modal States
+  const [activePayslipStaff, setActivePayslipStaff] = useState(null);
+  const [activePayoutStaff, setActivePayoutStaff] = useState(null);
+  const [payoutMethod, setPayoutMethod] = useState('Bank Transfer (NEFT/IMPS)');
+  const [payoutRef, setPayoutRef] = useState('');
+  const [payoutRemarks, setPayoutRemarks] = useState('');
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedPendingId, setExpandedPendingId] = useState(null);
   const [confirmRejectId, setConfirmRejectId] = useState(null);
@@ -184,6 +192,36 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
       setSettingsSaveSuccess(false);
       setShowSalarySettingsModal(false);
     }, 1200);
+  };
+
+  const handleExecutePayout = async (e) => {
+    e.preventDefault();
+    if (!activePayoutStaff) return;
+    setPayoutSubmitting(true);
+    try {
+      const breakdown = calcSalaryBreakdown(activePayoutStaff, selectedSalaryMonth, leaveRequests);
+      await recordSalaryPayout({
+        staffId: activePayoutStaff.id,
+        staffName: activePayoutStaff.name,
+        monthStr: selectedSalaryMonth,
+        gross: breakdown.monthly,
+        leaveDays: breakdown.leaveDays,
+        deduction: breakdown.deduction,
+        net: breakdown.net,
+        paymentMethod: payoutMethod,
+        transactionRef: payoutRef.trim() || `TXN-${Date.now().toString().slice(-6)}`,
+        remarks: payoutRemarks.trim() || 'Monthly compensation disbursed by Salon Admin',
+        disbursedBy: currentUser?.name || 'Salon Admin',
+        date: new Date().toISOString()
+      });
+      setActivePayoutStaff(null);
+      setPayoutRef('');
+      setPayoutRemarks('');
+    } catch (err) {
+      console.error('Error executing payout', err);
+    } finally {
+      setPayoutSubmitting(false);
+    }
   };
 
   const formatDate = (isoString) => {
@@ -1429,37 +1467,76 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
 
                           {/* Actions / Status */}
                           <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
-                            {disbursement ? (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '0.3rem 0.65rem',
-                                borderRadius: '4px',
-                                background: 'rgba(16, 185, 129, 0.15)',
-                                border: '1px solid rgba(16, 185, 129, 0.35)',
-                                color: '#34d399',
-                                fontSize: '0.72rem',
-                                fontWeight: 700
-                              }}>
-                                <Check size={12} /> Disbursed
-                              </span>
-                            ) : (
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '0.3rem 0.65rem',
-                                borderRadius: '4px',
-                                background: 'rgba(245, 158, 11, 0.12)',
-                                border: '1px solid rgba(245, 158, 11, 0.35)',
-                                color: '#fbbf24',
-                                fontSize: '0.72rem',
-                                fontWeight: 700
-                              }}>
-                                Ready for Payout
-                              </span>
-                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem', flexWrap: 'wrap' }}>
+                              {/* Payslip Generator Button */}
+                              {breakdown.monthly > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePayslipStaff(stf)}
+                                  className="btn-outline"
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.72rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="View and print official salary payslip"
+                                >
+                                  <FileText size={12} /> Payslip
+                                </button>
+                              )}
+
+                              {/* Payout Disbursal Button or Paid Badge */}
+                              {disbursement ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePayslipStaff(stf)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    padding: '0.35rem 0.65rem',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: 'rgba(16, 185, 129, 0.15)',
+                                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                                    color: '#34d399',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                  title={`Paid via ${disbursement.paymentMethod} (Ref: ${disbursement.transactionRef || 'N/A'})`}
+                                >
+                                  <Check size={12} /> Paid
+                                </button>
+                              ) : breakdown.monthly > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePayoutStaff(stf)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    padding: '0.35rem 0.65rem',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15))',
+                                    border: '1px solid rgba(16, 185, 129, 0.45)',
+                                    color: '#34d399',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)'
+                                  }}
+                                >
+                                  <CreditCard size={12} /> Disburse
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                  Set Salary First
+                                </span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1758,6 +1835,258 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
           </div>
         </div>
       )}
+
+      {/* ═════════════════════════════════════════════════════════════════
+          STAFF SALARY PAYSLIP MODAL
+          ═════════════════════════════════════════════════════════════════ */}
+      {activePayslipStaff && (() => {
+        const breakdown = calcSalaryBreakdown(activePayslipStaff, selectedSalaryMonth, leaveRequests);
+        const disbursement = (salaryDisbursements || []).find(d => d.staffId === activePayslipStaff.id && d.monthStr === selectedSalaryMonth);
+        const workingDays = salarySettings?.workingDaysPerMonth || 26;
+
+        return (
+          <div className="modal-overlay" onClick={() => setActivePayslipStaff(null)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', background: '#0d0d14', border: '1.5px solid var(--accent-gold)', padding: '2rem' }}>
+              
+              {/* Slip Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid rgba(217, 119, 6, 0.4)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>STYLE<span style={{ color: 'var(--accent-gold)' }}>SYNC</span></span>
+                    <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', background: 'rgba(217,119,6,0.15)', color: 'var(--accent-gold)', borderRadius: '4px', fontWeight: 700, border: '1px solid rgba(217,119,6,0.3)' }}>OFFICIAL PAYSLIP</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Luxury Salon Management &amp; Stylist Compensation</div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>Pay Period</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>{selectedSalaryMonth}</div>
+                </div>
+              </div>
+
+              {/* Staff Identification Details Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-sm)', padding: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Employee Name</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>{activePayslipStaff.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{activePayslipStaff.role}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Designation &amp; Grade</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--accent-gold)' }}>{activePayslipStaff.level || 'Junior'} Specialist</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID: {activePayslipStaff.id}</div>
+                </div>
+              </div>
+
+              {/* Earnings & Deductions Breakdown Tables */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* Earnings */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.65rem' }}>Earnings &amp; Allowances</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Monthly Base Gross:</span>
+                    <strong style={{ color: '#fff' }}>₹{breakdown.monthly.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <span>Standard Basis:</span>
+                    <span>{workingDays} Days / Mo</span>
+                  </div>
+                </div>
+
+                {/* Deductions */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.65rem' }}>Leave Deductions</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Daily Deduction Rate:</span>
+                    <strong style={{ color: '#fff' }}>₹{breakdown.perDay.toLocaleString('en-IN')}/d</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Leaves Count:</span>
+                    <strong style={{ color: '#fbbf24' }}>{breakdown.leaveDays} {breakdown.leaveDays === 1 ? 'day' : 'days'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '0.4rem' }}>
+                    <span style={{ color: '#f87171' }}>Total Deductions:</span>
+                    <strong style={{ color: '#f87171' }}>−₹{breakdown.deduction.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Itemized Leave Records if any */}
+              {breakdown.relevantLeaves && breakdown.relevantLeaves.length > 0 && (
+                <div style={{ marginBottom: '1.5rem', background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                    Approved Absence Deductions This Month ({breakdown.relevantLeaves.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.78rem' }}>
+                    {breakdown.relevantLeaves.map((l, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span>• {l.leaveType || 'Leave'}: {l.startDate} {l.endDate && l.endDate !== l.startDate ? `to ${l.endDate}` : ''} ({l.session || 'Full Day'})</span>
+                        <span style={{ color: '#f87171', fontWeight: 600 }}>Reason: {l.reason || 'Personal'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Net Remuneration Banner */}
+              <div style={{
+                padding: '1.25rem',
+                borderRadius: 'var(--radius-sm)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.08))',
+                border: '1.5px solid #10b981',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Net Remuneration Payable</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Final take-home after statutory &amp; leave calculations</div>
+                </div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#34d399' }}>
+                  ₹{breakdown.net.toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              {/* Disbursal Ledger Information */}
+              {disbursement && (
+                <div style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  <div style={{ color: '#34d399', fontWeight: 700, marginBottom: '0.2rem' }}>✅ Disbursed &amp; Reconciled</div>
+                  <div>Method: <strong>{disbursement.paymentMethod}</strong> • Ref / UTR: <strong style={{ color: '#fff' }}>{disbursement.transactionRef || 'N/A'}</strong></div>
+                  <div>Disbursed On: {formatDate(disbursement.date || disbursement.createdAt)} by {disbursement.disbursedBy || 'Admin'}</div>
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  <FileText size={15} /> Print Payslip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePayslipStaff(null)}
+                  className="btn-gold"
+                  style={{ padding: '0.55rem 1.4rem', fontSize: '0.85rem' }}
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═════════════════════════════════════════════════════════════════
+          PAYOUT DISBURSAL MODAL
+          ═════════════════════════════════════════════════════════════════ */}
+      {activePayoutStaff && (() => {
+        const breakdown = calcSalaryBreakdown(activePayoutStaff, selectedSalaryMonth, leaveRequests);
+
+        return (
+          <div className="modal-overlay" onClick={() => setActivePayoutStaff(null)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', background: '#0e0e16', border: '1.5px solid #10b981' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Wallet size={20} style={{ color: '#34d399' }} />
+                  <h3 className="font-serif gold-text" style={{ fontSize: '1.35rem', margin: 0 }}>Record Salary Disbursal</h3>
+                </div>
+                <button onClick={() => setActivePayoutStaff(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Staff & Amount Header */}
+              <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: 'var(--radius-sm)', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#fff', fontSize: '1rem' }}>{activePayoutStaff.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activePayoutStaff.role} • Period: {selectedSalaryMonth}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Net Disbursable</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#34d399' }}>₹{breakdown.net.toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+
+              <form onSubmit={handleExecutePayout}>
+                {/* Payment Method */}
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Payment Channel</label>
+                  <select
+                    className="form-input"
+                    value={payoutMethod}
+                    onChange={e => setPayoutMethod(e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  >
+                    <option value="Bank Transfer (NEFT/IMPS)">Bank Transfer (NEFT/IMPS / RTGS)</option>
+                    <option value="UPI / PhonePe / GooglePay">UPI (PhonePe / Google Pay / BHIM)</option>
+                    <option value="Cash Voucher">Cash Voucher</option>
+                    <option value="Cheque Payout">Cheque Payout</option>
+                  </select>
+                </div>
+
+                {/* Reference / UTR Number */}
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Transaction Reference / UTR Number</label>
+                  <input
+                    type="text"
+                    placeholder={`e.g. UTR${Date.now().toString().slice(-8)} or Bank Ref`}
+                    value={payoutRef}
+                    onChange={e => setPayoutRef(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Remarks */}
+                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label">Remarks / Accounting Note (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. October 2026 Salary transfer via HDFC Bank"
+                    value={payoutRemarks}
+                    onChange={e => setPayoutRemarks(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActivePayoutStaff(null)}
+                    className="btn-outline"
+                    style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={payoutSubmitting}
+                    className="btn-gold"
+                    style={{
+                      padding: '0.55rem 1.4rem',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      borderColor: '#10b981'
+                    }}
+                  >
+                    {payoutSubmitting ? 'Recording...' : <><Check size={16} /> Confirm Payout Disbursal</>}
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
