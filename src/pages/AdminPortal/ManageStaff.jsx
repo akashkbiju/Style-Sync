@@ -224,6 +224,58 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
     }
   };
 
+  const handleExportPayrollCSV = () => {
+    const workingDays = salarySettings?.workingDaysPerMonth || 26;
+    const headers = [
+      'Staff ID',
+      'Staff Name',
+      'Role',
+      'Grade / Level',
+      'Monthly Gross (INR)',
+      'Working Days Basis',
+      'Daily Wage Rate (INR)',
+      'Approved Leave Days',
+      'Total Leave Deduction (INR)',
+      'Net Salary Payable (INR)',
+      'Disbursal Status',
+      'Payment Method',
+      'Transaction Ref / UTR',
+      'Disbursal Date'
+    ];
+
+    const rows = staff.map(stf => {
+      const breakdown = calcSalaryBreakdown(stf, selectedSalaryMonth, leaveRequests);
+      const disbursement = (salaryDisbursements || []).find(d => d.staffId === stf.id && d.monthStr === selectedSalaryMonth);
+      return [
+        `"${stf.id || ''}"`,
+        `"${stf.name || ''}"`,
+        `"${stf.role || ''}"`,
+        `"${stf.level || 'Junior'}"`,
+        breakdown.monthly,
+        workingDays,
+        breakdown.perDay,
+        breakdown.leaveDays,
+        breakdown.deduction,
+        breakdown.net,
+        `"${disbursement ? 'Disbursed' : (breakdown.monthly > 0 ? 'Pending Payout' : 'Not Configured')}"`,
+        `"${disbursement?.paymentMethod || 'N/A'}"`,
+        `"${disbursement?.transactionRef || 'N/A'}"`,
+        `"${disbursement?.date ? new Date(disbursement.date).toLocaleDateString('en-IN') : 'N/A'}"`
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `StyleSync_Payroll_${selectedSalaryMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const formatDate = (isoString) => {
     if (!isoString) return 'Unknown';
     const d = new Date(isoString);
@@ -1212,6 +1264,23 @@ export const ManageStaff = ({ initialTab = 'roster' }) => {
                   }}
                 >
                   <Settings size={14} /> Policy &amp; Rules
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportPayrollCSV}
+                  className="btn-outline"
+                  style={{
+                    padding: '0.45rem 0.95rem',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: 'pointer'
+                  }}
+                  title="Export current payroll roster as a CSV spreadsheet"
+                >
+                  <Download size={14} /> Export CSV
                 </button>
               </div>
             </div>
